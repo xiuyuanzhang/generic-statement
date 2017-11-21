@@ -1,0 +1,71 @@
+---
+title: "Generics Analyses"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+```{r}
+library(tidyverse)
+
+
+qualtrics <- read.csv('qualtrics_data.csv')
+
+mturk <- read.csv("mturk_results.csv")
+
+
+qualtrics_fixed <- qualtrics[-c(0:31),]
+nrow(qualtrics_fixed)
+View(qualtrics_fixed)
+which(duplicated(qualtrics_fixed$IPAddress))
+qualtrics_fixed$IPAddress[which(duplicated(qualtrics_fixed$IPAddress))]
+
+qualtrics_fixed <- qualtrics_fixed %>%
+  #this turker took survey twice, drop results from second attempt
+  filter(MTurkCode != 19198106)
+
+qualtrics_filtered <- qualtrics_fixed %>%
+  filter(Q10 == "kobas,feps,dands")
+
+tmp_1 <- qualtrics_filtered %>%
+  select(MTurkCode, Q2_1, baseline_1, feature_initial) %>%
+  mutate(questionNumber=1)
+tmp_2 <- qualtrics_filtered %>%
+  select(MTurkCode, Q5_1, baseline_2, feature_2) %>%
+  mutate(questionNumber=2)
+tmp_3 <- qualtrics_filtered %>%
+  select(MTurkCode, Q6_1, baseline_3, feature_3) %>%
+  mutate(questionNumber=3)
+
+percentage_answers <- rbind(tmp_1, setNames(tmp_2, names(tmp_1)), setNames(tmp_3, names(tmp_1)))
+
+
+
+high_words <- c("dog","truck","pizza")
+med_words <- c("pie", "stone", "goat")
+low_words <- c("vegetable", "bike", "squirrel")
+
+percentage_answers <- percentage_answers %>%
+  mutate(intuition = ifelse(baseline_1 %in% high_words, "high", 
+                            ifelse(baseline_1 %in% med_words, "medium", "low"))) %>%
+  mutate(intuition = factor(intuition, levels = c("low", "medium", "high")))
+
+avg_percentage <- percentage_answers %>%
+  group_by(feature_initial, intuition, baseline_1) %>%
+  mutate(Q2_1= as.numeric(as.character(Q2_1))) %>%
+  summarize(avg_rating = mean(Q2_1),
+            sd = sd(Q2_1),
+            n=n())
+
+ggplot(avg_percentage, aes(x=intuition, y=avg_rating)) +
+  geom_bar(stat="identity", position="dodge") +
+  geom_linerange(aes(ymin=avg_rating-sd, ymax=avg_rating+sd)) +
+  facet_wrap(~feature_initial)
+
+```
