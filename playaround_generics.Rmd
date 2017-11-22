@@ -90,3 +90,16 @@ ggplot(predicted_data, aes(x = type, y = value, color = measure)) +
   geom_violin() +
   geom_jitter(width = .1)
 ```
+
+plot model predictions with the jitter and violin plots paired
+```{r}
+predicted_data <- response_data %>%
+  mutate(predicted = predict(lm)) %>%
+  gather(measure, value, response, predicted)
+
+ggplot(predicted_data, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+      
+```
