@@ -14,6 +14,8 @@ library(lubridate)
 library(lme4)
 library(DT)
 library(ggpirate)
+library(compute.es)
+library(pwr)
 
 theme_set(theme_classic(base_size = 14))
 ```
@@ -59,7 +61,6 @@ response_data <- bind_rows(q1, q2, q3) %>%
 
 Exploratory data analysis
 ```{r}
-
 response_data %>%
   group_by(feature, type) %>%
   summarise(respose = mean(response)) %>%
@@ -70,6 +71,40 @@ ggplot(response_data, aes(x = type, y = response)) +
   #geom_violin() +
   #geom_jitter(width = .1)
   geom_pirate()
+
+tasty_data <- response_data %>%
+  filter(feature == "tasty") %>%
+  group_by(type)
+
+ggplot(tasty_data, aes(x = response)) + 
+  facet_wrap(~type) +
+  geom_histogram(binwidth = 20)
+
+tasty_descriptives <- tasty_data %>%
+  summarise(sd = sd(response), mean = mean(response), n = n()) %>%
+  data.frame()
+
+
+
+d_high_low <- mes(m.1 = tasty_descriptives[3,"mean"], m.2 =
+                    tasty_descriptives[1,"mean"],
+                  sd.1 = tasty_descriptives[3,"sd"], sd.2 = tasty_descriptives[1,"sd"],
+                  n.1 = tasty_descriptives[3,"n"], n.2 = tasty_descriptives[1,"n"],
+                  verbose = F)$d
+
+
+d_medium_low <- mes(m.1 = tasty_descriptives[2,"mean"], m.2 =
+                    tasty_descriptives[1,"mean"],
+                  sd.1 = tasty_descriptives[2,"sd"], sd.2 = tasty_descriptives[1,"sd"],
+                  n.1 = tasty_descriptives[2,"n"], n.2 = tasty_descriptives[1,"n"],
+                  verbose = F)$d
+
+pwr.t.test(d = d_high_low, power = .95)
+
+pwr.t.test(d = d_medium_low, power = .95)
+```
+
+
 ```
 
 fit model
