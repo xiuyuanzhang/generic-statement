@@ -1,0 +1,115 @@
+---
+title: "Baseline Percentage Analyses"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+read in data
+```{r, message = F}
+data <- read_csv("012518anonymized_data.csv")
+```
+
+filter out participants who didn't get attention check right
+```{r}
+qualtrics_filtered <- data %>%
+  filter(Q8 == "friendly,tasty,heavy")
+```
+
+Munge data
+```{r}
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("turtles", "bikes", "turtles")
+
+# get data for each of the three conditions
+q1 <- qualtrics_filtered %>%
+  select(id, L_feature, L_object, Q1, Q2_1) %>%
+  rename(feature = L_feature, baseline_object = L_object, TF_response = Q1, P_response = Q2_1)
+
+q2 <- qualtrics_filtered %>%
+  select(id, M_feature, M_object, Q3, Q4_1) %>%
+  rename(feature = M_feature, baseline_object = M_object, TF_response = Q3, P_response = Q4_1)
+
+q3 <- qualtrics_filtered %>%
+  select(id, H_feature, H_object, Q5, Q6_1) %>%
+  rename(feature = H_feature, baseline_object = H_object, TF_response = Q5, P_response = Q6_1)
+
+# combine
+response_data <- bind_rows(q1, q2, q3) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+
+```
+
+Exploratory data analysis
+```{r}
+# looking at the overall response percentage for three levels
+response_data %>%
+  group_by(type) %>%
+  summarise(response = mean(P_response)) %>%
+  datatable()
+
+# group by feature and type
+response_data %>%
+  group_by(feature, type) %>%
+  summarise(response = mean(P_response)) %>%
+  datatable()
+
+# plot
+ggplot(response_data, aes(x = type, y = P_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  geom_pirate()
+```
+
+fit model
+```{r}
+# including TF_response (the Yes or No response for the evaluation)
+lm_1 <- lmer(P_response ~ type + feature + TF_response + (1|id), data = response_data)
+summary(lm_1)
+
+# Not including TF_response
+lm_2 <- lmer(P_response ~ type + feature + (1|id), data = response_data)
+summary(lm_2)
+```
+
+plot model predictions
+```{r}
+predicted_data1 <- response_data %>%
+  mutate(predicted = predict(lm_1)) %>%
+  gather(measure, value, P_response, predicted)
+
+ggplot(predicted_data1, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+```
+
+The predicted data below without considering the TF_response variable in model lm_2 doesn't describe the spread of our original data well.
+```{r}
+predicted_data2 <- response_data %>%
+  mutate(predicted = predict(lm_2)) %>%
+  gather(measure, value, P_response, predicted)
+
+ggplot(predicted_data2, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+```
+
+
