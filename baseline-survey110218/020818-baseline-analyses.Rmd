@@ -1,0 +1,168 @@
+---
+title: "Baseline Percentage Analyses"
+date: 02/08/2018
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+### read in data
+```{r, message = F}
+data <- read_csv("020818baseline-anonymized-data.csv")
+```
+
+### filter out participants who didn't get attention check right
+Out of 150 partipants, 145 participants passed the attention check.
+```{r}
+qualtrics_filtered <- data %>%
+  filter(Q8 == "friendly,tasty,heavy")
+```
+
+### Munge data
+```{r}
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("squirrels", "bikes", "vegetables")
+features <- c("friendly", "heavy", "tasty")
+
+# features and objects for the survey
+objects <- data_frame(type = "high", object = high_objects,
+                      feature = features) %>%
+  bind_rows(data_frame(type = "medium", object = med_objects,
+                       feature = features)) %>%
+  bind_rows(data_frame(type = "low", object = low_objects,
+                       feature = features))
+
+# get data for each of the three conditions
+q1 <- qualtrics_filtered %>%
+  select(id, L_feature, L_object, Q1, Q2_1) %>%
+  rename(feature = L_feature, baseline_object = L_object, truefalse_response = Q1, percent_response = Q2_1)
+
+q2 <- qualtrics_filtered %>%
+  select(id, M_feature, M_object, Q3, Q4_1) %>%
+  rename(feature = M_feature, baseline_object = M_object, truefalse_response = Q3, percent_response = Q4_1)
+
+q3 <- qualtrics_filtered %>%
+  select(id, H_feature, H_object, Q5, Q6_1) %>%
+  rename(feature = H_feature, baseline_object = H_object, truefalse_response = Q5, percent_response = Q6_1)
+
+# combine
+response_data <- bind_rows(q1, q2, q3) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+
+# filter to include only participants who chose "Yes" to the question on evaluating generic statement
+response_filtered_yes <- response_data %>%
+  filter(truefalse_response == "Yes")
+```
+
+### Exploratory data analysis
+```{r}
+# group by feature and type for all participants
+response_data %>%
+  group_by(feature, type) %>%
+  summarise(response = mean(percent_response)) %>%
+  datatable()
+
+# group by feature and type, filter "Yes" answers for evaluting generic statement
+response_filtered_yes %>%
+  group_by(feature, type) %>%
+  summarise(response = mean(percent_response)) %>%
+  datatable()
+
+# plot - histogram
+ggplot(response_data, aes(x = response_data$percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("All Participants") + 
+  geom_histogram(bins = 50)
+
+ggplot(response_filtered_yes, aes(x = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Yes Participants") + 
+  geom_histogram(bins = 50)
+
+# plot - scatter
+ggplot(response_data, aes(x = percent_response, y = feature, color = feature, fill = feature)) +
+  ggtitle("All Partcipants Percent Evaluation") + 
+  geom_jitter()
+
+ggplot(response_filtered_yes, aes(x = percent_response, y = feature, color = feature, fill = feature)) +
+  ggtitle("Yes-Only Partcipants Percent Evaluation") + 
+  geom_jitter()
+
+# plot - pirate
+p1 <- ggplot(response_data, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("All Participants") + 
+  geom_pirate()
+
+p2 <- ggplot(response_filtered_yes, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Yes-Only Participants") +
+  geom_pirate()
+
+grid.arrange(p1, p2, ncol = 2)
+
+# Percentage of participants choosing Yes or No for evaluation the generic, grouped by type(low, medium, high) and feature(friendly, tasty, heavy)
+endorsement <- response_data %>%
+  group_by(type, feature, truefalse_response) %>%
+  summarise(n = n()) %>%
+  group_by(type, feature) %>%
+  mutate(prop = n/sum(n)) %>%
+  select(-n) %>%
+  left_join(objects) %>%
+  ungroup() %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high"))) %>%
+  spread(truefalse_response, prop, fill = 0) %>%
+  arrange(type) 
+```
+
+### fit model
+```{r}
+# all participants
+lm_1 <- lmer(percent_response ~ type + feature + truefalse_response + (1|id), data = response_data)
+summary(lm_1)
+
+# with the yes-filtered data
+lm_2 <-lmer(percent_response ~ type + feature +  (1|id), data = response_filtered_yes)
+summary(lm_2)
+```
+
+### plot model predictions
+```{r}
+# all participants
+predicted_data1 <- response_data %>%
+  mutate(predicted = predict(lm_1)) %>%
+  gather(measure, value, percent_response, predicted)
+
+ggplot(predicted_data1, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+
+# yes-filtered data
+predicted_data2 <- response_filtered_yes %>%
+  mutate(predicted = predict(lm_2)) %>%
+  gather(measure, value, percent_response, predicted)
+
+ggplot(predicted_data2, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+```

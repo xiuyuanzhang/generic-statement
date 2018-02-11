@@ -1,0 +1,152 @@
+---
+title: "Generic Statement Analysis"
+date: 02/11/2018
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+### Read in anonymized data
+```{r, message = F}
+data <- read_csv("020818generic-anonymized-data.csv")
+```
+
+Filter out participants who didn't get attention check right
+```{r}
+qualtrics_filtered <- data %>%
+  filter(Q10 == "kobas,feps,dands")
+```
+Out of 150 partipants, 114 participants passed the attention check.
+
+
+### Munge data
+```{r}
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("squirrels", "bikes", "vegetables")
+features <- c("friendly", "heavy", "tasty")
+
+objects <- data_frame(type = "high", object = high_objects,
+                      feature = features) %>%
+  bind_rows(data_frame(type = "medium", object = med_objects,
+                       feature = features)) %>%
+  bind_rows(data_frame(type = "low", object = low_objects,
+                       feature = features))
+```
+
+```{r}
+colnames(qualtrics_filtered)[colnames(qualtrics_filtered) == "Duration (in seconds)"] <- "time_spent"
+
+# get data for each of the three conditions
+q1 <- qualtrics_filtered %>%
+  select(id, L_feature, L_comparison, L_novel, Q2_1, time_spent) %>%
+  rename(feature = L_feature, baseline_object = L_comparison, novel_object = L_novel, percent_response = Q2_1)
+
+q2 <- qualtrics_filtered %>%
+  select(id, M_feature, M_comparison, M_novel, Q5_1, time_spent) %>%
+  rename(feature = M_feature, baseline_object = M_comparison, novel_object = M_novel,percent_response = Q5_1)
+
+q3 <- qualtrics_filtered %>%
+  select(id, H_feature, H_comparison, H_novel, Q6_1, time_spent) %>%
+  rename(feature = H_feature, baseline_object = H_comparison, novel_object = H_novel, percent_response = Q6_1)
+
+# combine
+response_data <- bind_rows(q1, q2, q3) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+
+# filter participants based on their time of survey completion
+response_data_control_for_time <- response_data %>%
+  filter(time_spent > 45)
+```
+For the time_spent variable, there are participants who completed the task in 20 or 30 seconds. It is doubtful whether they did the task carefully or not, so it may be helpful to look at the data, controllong for the time_spent variable.  
+
+### Exploratory data analysis
+```{r}
+# group by feature and type for all participants
+response_data %>%
+  group_by(feature, type) %>%
+  summarise(response = mean(percent_response)) %>%
+  datatable()
+
+response_data_control_for_time %>%
+  group_by(feature, type) %>%
+  summarise(response = mean(percent_response)) %>%
+  datatable()
+
+```
+
+
+```{r}
+# plot - histogram
+ggplot(response_data, aes(x = percent_response, color = feature, fill = feature)) +   facet_wrap(~ feature) +
+  ggtitle("All Participants Percent Evaluation") + 
+  geom_histogram(bins = 50)
+
+ggplot(response_data_control_for_time, aes(x = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Time of Completion > 45s Percent Evaluation") + 
+  geom_histogram(bins = 50)
+
+# plot - scatter
+ggplot(response_data, aes(x = percent_response, y = feature, color = feature, fill = feature)) +
+  ggtitle("Novel Object Percent Evaluation") + 
+  geom_jitter()
+```
+
+
+```{r}
+# plot - pirate
+p1<- ggplot(response_data, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("All participants - Percent Evaluation") + 
+  geom_pirate()
+
+p2 <- ggplot(response_data_control_for_time, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Time of Completion > 50s - Percent Evaluation") + 
+  geom_pirate()
+
+grid.arrange(p1, p2, ncol = 2)
+
+```
+
+
+Should we handle the outliers of this data in some way?
+
+### fit model
+```{r}
+# all participants
+lm_1 <- lmer(percent_response ~ type + feature + baseline_object + (1|id), data = response_data)
+summary(lm_1)
+```
+
+### plot model predictions
+```{r}
+# all participants
+predicted_data1 <- response_data %>%
+  mutate(predicted = predict(lm_1)) %>%
+  gather(measure, value, percent_response, predicted)
+
+ggplot(predicted_data1, aes(x = type , y = value, color = measure,fill = measure))  + 
+      facet_wrap(~ feature) + 
+      geom_violin(fill="white", position = position_dodge(width=1)) +
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+
+```
