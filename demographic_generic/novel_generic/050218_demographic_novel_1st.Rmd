@@ -1,0 +1,136 @@
+---
+title: "Novel Generic Demographic Control by Gender and Age"
+author: "Xiuyuan Zhang"
+date: "5/3/2018"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+### Read in anonymized data
+n = 195
+```{r, message = F}
+data <- read_csv("data/05022018_novel_195_anonymized_data.csv")
+```
+
+Filter peole who passed the attention check, result n = 179
+```{r}
+qualtrics_filtered <- data %>%
+  filter(Q10 == "watch sports,watch cable tv,rent apartments,like deserts,drive to work,like the window seat on the plane")
+```
+
+Group data by gender and age, respectively
+```{r}
+# Q5_1 is about watch sports
+# Q6_1 is about desserts but I spelled desserts wrong (as deserts) so the results are invalid
+# Q2_1 is about watch cable tv
+# Q12_1 is about rent apartment
+# Q13_1 is about drive to work
+# Q14_1 is about like the window seat on the plane
+data_gender <- qualtrics_filtered %>%
+  select(Q5_1, Q6_1, Q2_1, Q12_1, Q13_1, Q14_1, Q15) %>%
+  rename(Gender = Q15)
+data_age <- qualtrics_filtered %>%
+  select(Q5_1, Q6_1, Q2_1, Q12_1,  Q13_1, Q14_1, Q16)
+```
+
+```{r}
+# By Gender
+ggplot(data_gender, aes(x = Gender, y = Q6_1, fill = Gender)) +
+  geom_boxplot() + 
+  ggtitle("Like Desserts(deserts) by Gender")
+
+ggplot(data_gender, aes(x = Gender, y = Q5_1, fill = Gender)) +
+  geom_boxplot() +
+  ggtitle("Watch Sports by Gender")
+
+ggplot(data_gender, aes(x = Gender, y = Q2_1, fill = Gender)) +
+  geom_boxplot() +
+  ggtitle("Watch Cable TV by Gender")
+
+ggplot(data_gender, aes(x = Gender, y = Q12_1, fill = Gender)) +
+  geom_boxplot() + 
+  ggtitle("Rent Apartments by Gender")
+  
+ggplot(data_gender, aes(x = Gender, y = Q13_1, fill = Gender)) +
+  geom_boxplot() +
+  ggtitle("Drive to Work by Gender")
+
+ggplot(data_gender, aes(x = Gender, y = Q14_1, fill = Gender)) +
+  geom_boxplot() +
+  ggtitle("Like the Window Seat on the Plane by Age Groups")
+```
+
+Establishing age categories
+```{r}
+categorize_age <- function(x){
+  if (x <= 30){
+    category <- 1
+  }
+  else if (x > 30 & x <= 40) {
+    category <- 2
+  } 
+  else if (x > 40 & x <= 50) {
+    category <- 3
+  }
+  else if (x > 50 & x <= 60) {
+    category <- 4
+  }
+  else {
+    category <- 5
+  }
+  return(category)
+}
+for (i in row(data_age)) {
+  data_age$category[i] <- categorize_age(data_age$Q16[i])
+}
+
+data_age_5group <- data_age %>%
+  select(Q5_1, Q6_1, Q2_1, Q12_1,  Q13_1, Q14_1,category)
+```
+
+```{r}
+# Looking at the age distribution
+ggplot(data_age, aes(x = Q16)) +
+  geom_bar()
+
+# by age
+ggplot(data_age_5group, aes(x = category, y = Q2_1, group = category, fill = category)) +
+  geom_boxplot() + 
+  ggtitle("Watch Cable TV by Age Groups")
+
+ggplot(data_age_5group, aes(x = category, y = Q12_1, group = category, fill = category)) +
+  geom_boxplot() +
+  ggtitle("Rent Apartments by Age Groups")
+
+ggplot(data_age_5group, aes(x = category, y = Q5_1, group = category, fill = category)) +
+  geom_boxplot() +
+  ggtitle("Watch Sports by Age Groups")
+
+ggplot(data_age_5group, aes(x = category, y = Q6_1, group = category, fill = category)) +
+  geom_boxplot()  +
+  ggtitle("Like Desserts(deserts) by Age Groups")
+
+ggplot(data_age_5group, aes(x = category, y = Q13_1, group = category, fill = category)) +
+  geom_boxplot()  +
+  ggtitle("Drive to Work by Age Groups")
+
+ggplot(data_age_5group, aes(x = category, y = Q14_1, group = category, fill = category)) +
+  geom_boxplot() +
+  ggtitle("Like the Window Seat on the Plane by Age Groups")
+
+```
+
