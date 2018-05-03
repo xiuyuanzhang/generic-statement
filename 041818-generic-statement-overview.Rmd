@@ -1,0 +1,252 @@
+---
+title: "Learning Novel Categories through Background Knowledge Using Generic Statements"
+author: "Xiuyuan Zhang & Dan Yurovsky"
+date: "4/17/2018"
+fontsize: 11pt
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+fig_crop: false
+geometry: margin=0.75in
+header-includes:
+  - \usepackage{pdfpages}
+---
+## Hypothesis
+In a speaker-listner interaction scenario, where the speaker utters a true generic statement '$C$(category) are $F$(feature),' we hypothesize that, when $C$ is a novel category, the listner uses her own background knowledge to infer the prevalence rate of feature $F$ in category $C$ upon hearing the generic. In our current paradigm, we provide participants a familiar category $C_{familiar}$, $C_{familiar}$ serving as background knowledge.  
+
+## Conditions
+The table below includes our feature selection, its corresponding comparison categories (chosen based on our estimate of their low, medium, and high prevalence rate) and novel categories.  
+
+Feature | Alternative Comparison Categories | Novel Category
+:-------|:-------|:-------
+friendly| Puppies (H), Goats (M), Squirrels (L) | Feps 
+tasty| Pizzas (H), Fruits (M), Vegetables (L) | Kobas 
+heavy| Trucks (H), Stones (M), Bikes (L) | Dands 
+
+(H = high prevalence, M = medium prevalence, L = low prevalence )  
+
+## Setup
+We run three separate survey studies on Amazon Mechanical Turk. All three surveys provide participants a narrative that introduces them to an imaginary country, Akar. Sample questions from all three surveys are provided in the section below. The first survey recorded participants's evaluation of a given generic statement as True or False as well as their prevalence rate estimates for all abovementioned 9 categories (3 per feature.) The second survey introduced a novel category $C_{novel}$ along with a familiar comparison category $C_{familiar}$, then asked participants to estimate the prevalence rate of the feature $F$ in novel category $C_{novel}$. The third survey is similar to the second, with the difference that we only stated '$C_{novel}$ are like $C_{familiar}$.' before asking participants to estimate the prevalance rate of feature $F$ for $C_{novel}$. This survey serves as a sanity check, checking whether participants treat $C_{novel}$ as equivalent to $C_{familiar}$ and provide a smiliar rather than higher estimate for $C_{novel}$ comparing to estimates for $C_{familiar}$.  
+
+
+## Below are two examples of the MTurk survey that we run:  
+1. Getting the baseline prevalence rate for familiar comparison categories.  
+
+\begin{center}  
+\includegraphics[height = 2.5in]{survey_screenshots/baseline-021118/baseline_narrative.png}
+\end{center}
+
+\begin{center}
+\includegraphics[height = 2.5in]{survey_screenshots/baseline-021118/baseline_generic_eval.png}
+\end{center}
+
+\begin{center}
+\includegraphics[height = 2.5in]{survey_screenshots/baseline-021118/baseline_p_estimation.png}
+\end{center}
+
+2. Introducing a novel category with a generic statement, provding participants familiar comparison categories.  
+  
+\begin{center}
+\includegraphics[height = 2in]{survey_screenshots/explicit-generic-021118/explicit_generic_narrative.png}
+\end{center}
+
+\begin{center}
+\includegraphics[height = 3in]{survey_screenshots/explicit-generic-021118/explicit_generic_p_estimation.png}
+\end{center}
+
+## Results
+\includegraphics[height = 3in]{baseline.png}
+\includegraphics[height = 3in]{explicit_generic.png}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load_libraries, message = F, warning = F}
+#### Load libraries
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+```{r, message = F}
+#### read in data
+### baseline ###
+data_baseline <- read_csv("baseline-survey110218/data/020818baseline-anonymized-data.csv")
+### explicit generic ###
+data_generic <- read_csv("generic-survey110218/data/020818generic-anonymized-data.csv")
+### implicit generic ###
+data_implicit <- read_csv("implicit-generic022318/data/022318implicit-generic-anonymized-data.csv")
+```
+
+```{r}
+#### filter participants who passed attention check 
+### baseline ###
+qualtrics_filtered_baseline <- data_baseline %>%
+  filter(Q8 == "friendly,tasty,heavy")
+### explicit generic ###
+qualtrics_filtered_generic <- data_generic %>%
+  filter(Q10 == "kobas,feps,dands")
+### implicit generic ###
+qualtrics_filtered_implicit <- data_implicit %>%
+  filter(Q10 == "kobas,feps,dands")
+```
+
+```{r}
+#### Munge data
+### In all three surveys, the categories and features we chose are consistent.
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("squirrels", "bikes", "vegetables")
+features <- c("friendly", "heavy", "tasty")
+
+# features and objects for the survey
+objects <- data_frame(type = "high", object = high_objects,
+                      feature = features) %>%
+  bind_rows(data_frame(type = "medium", object = med_objects,
+                       feature = features)) %>%
+  bind_rows(data_frame(type = "low", object = low_objects,
+                       feature = features))
+
+# get data for each of the three conditions
+### baseline ###
+q1_baseline <- qualtrics_filtered_baseline %>%
+  select(id, L_feature, L_object, Q1, Q2_1) %>%
+  rename(feature = L_feature, baseline_object = L_object, truefalse_response = Q1, percent_response = Q2_1)
+
+q2_baseline <- qualtrics_filtered_baseline %>%
+  select(id, M_feature, M_object, Q3, Q4_1) %>%
+  rename(feature = M_feature, baseline_object = M_object, truefalse_response = Q3, percent_response = Q4_1)
+
+q3_baseline <- qualtrics_filtered_baseline %>%
+  select(id, H_feature, H_object, Q5, Q6_1) %>%
+  rename(feature = H_feature, baseline_object = H_object, truefalse_response = Q5, percent_response = Q6_1)
+
+### explicit generic ###
+colnames(qualtrics_filtered_generic)[colnames(qualtrics_filtered_generic) == "Duration (in seconds)"] <- "time_spent"
+
+# get data for each of the three conditions
+q1_generic <- qualtrics_filtered_generic %>%
+  select(id, L_feature, L_comparison, L_novel, Q2_1, time_spent) %>%
+  rename(feature = L_feature, baseline_object = L_comparison, novel_object = L_novel, percent_response = Q2_1)
+
+q2_generic <- qualtrics_filtered_generic %>%
+  select(id, M_feature, M_comparison, M_novel, Q5_1, time_spent) %>%
+  rename(feature = M_feature, baseline_object = M_comparison, novel_object = M_novel,percent_response = Q5_1)
+
+q3_generic <- qualtrics_filtered_generic %>%
+  select(id, H_feature, H_comparison, H_novel, Q6_1, time_spent) %>%
+  rename(feature = H_feature, baseline_object = H_comparison, novel_object = H_novel, percent_response = Q6_1)
+
+### implicit generic ###
+colnames(qualtrics_filtered_implicit)[colnames(qualtrics_filtered_implicit) == "Duration (in seconds)"] <- "time_spent"
+
+# get data for each of the three conditions
+q1_implicit <- qualtrics_filtered_implicit %>%
+  select(id, L_feature, L_comparison, L_novel, Q2_1, time_spent) %>%
+  rename(feature = L_feature, baseline_object = L_comparison, novel_object = L_novel, percent_response = Q2_1)
+
+q2_implicit <- qualtrics_filtered_implicit %>%
+  select(id, M_feature, M_comparison, M_novel, Q5_1, time_spent) %>%
+  rename(feature = M_feature, baseline_object = M_comparison, novel_object = M_novel,percent_response = Q5_1)
+
+q3_implicit <- qualtrics_filtered_implicit %>%
+  select(id, H_feature, H_comparison, H_novel, Q6_1, time_spent) %>%
+  rename(feature = H_feature, baseline_object = H_comparison, novel_object = H_novel, percent_response = Q6_1)
+
+# combine
+### baseline ###
+response_data_baseline <- bind_rows(q1_baseline, q2_baseline, q3_baseline) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+### explicit generic ###
+response_data_generic <- bind_rows(q1_generic, q2_generic, q3_generic) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+### implicit generic ###
+response_data_implicit <- bind_rows(q1_implicit, q2_implicit, q3_implicit) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+
+
+### baseline ###
+# filter to include only participants who chose "Yes" to the question on evaluating generic statement
+response_filtered_yes_baseline <- response_data_baseline %>%
+  filter(truefalse_response == "Yes")
+
+### explicit generic ###
+# filter participants based on their time of survey completion
+response_data_control_for_time_generic <- response_data_generic %>%
+  filter(time_spent > 45)
+
+### implicit generic ###
+# filter participants based on their time of survey completion
+response_data_control_for_time_implicit <- response_data_implicit %>%
+  filter(time_spent > 45)
+```
+
+```{r}
+# plot - pirate
+### baseline ###
+p1_baseline <- ggplot(response_data_baseline, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Baseline Prevalence Estimation") + 
+  xlab("familiar categories") + 
+  ylab("% Estimation") + 
+  theme(axis.text = element_text(size = 8)) + 
+  geom_pirate()
+
+p2_baseline <- ggplot(response_filtered_yes_baseline, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Baseline - Yes-Only") +
+  geom_pirate()
+
+### explicit generic ###
+p1_generic<- ggplot(response_data_generic, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Explicit Generic - All") + 
+  geom_pirate()
+
+p2_generic <- ggplot(response_data_control_for_time_generic, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Novel Category Prevalence Estimation") + 
+  xlab("familiar categories") + 
+  ylab("% Estimation") + 
+  theme(axis.text = element_text(size = 8)) + 
+  geom_pirate()
+
+### implicit generic ###
+p1_implicit<- ggplot(response_data_implicit, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Implicit Generic - All") + 
+  geom_pirate()
+
+p2_implicit <- ggplot(response_data_control_for_time_implicit, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
+  facet_wrap(~ feature) +
+  ggtitle("Implicit Generic - Time Spent > 45") + 
+  geom_pirate()
+
+#### arrange graphs
+#p1_baseline
+#p2_generic
+#grid.arrange(p1_baseline, p2_generic, ncol = 1)
+#grid.arrange(p1_baseline, p2_baseline, ncol = 2)
+#grid.arrange(p1_implicit, p2_implicit, ncol = 2)
+# put all graphs together
+# grid.arrange(p1_baseline, p2_baseline, p1_implicit, p2_implicit, p1_generic, p2_generic, ncol = 2)
+# put baseline-all, implicit-generic time spent>45, explicit generic time spent >45
+# grid.arrange(p1_baseline, p2_implicit, p2_generic, ncol = 3)
+# put baseline-Yes, implicit-generic time spent>45, explicit generic time spent >45
+# grid.arrange(p2_baseline, p2_implicit, p2_generic, ncol = 3)
+```
+

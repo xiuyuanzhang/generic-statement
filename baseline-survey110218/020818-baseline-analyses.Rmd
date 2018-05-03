@@ -22,7 +22,7 @@ theme_set(theme_classic(base_size = 14))
 
 ### read in data
 ```{r, message = F}
-data <- read_csv("020818baseline-anonymized-data.csv")
+data <- read_csv("data/020818baseline-anonymized-data.csv")
 ```
 
 ### filter out participants who didn't get attention check right
