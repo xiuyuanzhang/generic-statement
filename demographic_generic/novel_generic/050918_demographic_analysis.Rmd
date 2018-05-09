@@ -1,0 +1,176 @@
+---
+title: "Novel Generic Demographic Control by Gender and Age"
+author: "Xiuyuan Zhang and Dan Yurovsky"
+date: "5/9/2018"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+library(knitr)
+library(tidyboot)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+### Read in anonymized data
+
+```{r, message = F}
+data_novel <- read_csv("data/05092018_novel_anonymized_data.csv")
+```
+The total number of participants we get is `r nrow(data)`. 
+
+```{r}
+#"watch nightly news on tv,like online shopping,like the window seat on the plane,like desserts,drive to work,watch professional sports"
+attnCheckAnswers <- c('watch nightly news on tv','like online shopping','like the window seat on the plane','like desserts','drive to work','watch professional sports')
+
+qualtrics_filtered <- data_novel %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% attnCheckAnswers))%>%
+  filter(attnFalse==0)
+  
+  
+
+c('watch nightly news on tv', 'like online shopping', 'wahoo') %in% attnCheckAnswers
+
+```
+I did not adminster the attention check question in a format that is correct, so we are seeing if we adjust the passing criteria, what would be result.
+Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data)` )
+
+Rename questions
+```{r rename}
+tidy_data <- qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  rename(male_high = gender_watchsports_1, male_low = gender_desserts_1, age_high = age_nightlynews_1, age_low = age_onlineshopping_1, 
+         control_high = control_drive_1, control_low = control_windowseat_1) %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), 
+                         labels = c("female", "male"))) %>%
+  select(male_high, male_low, age_high, age_low, control_high, control_low, gender, age)
+```
+
+Basic demographics
+```{r demos}
+tidy_data %>%
+  group_by(gender) %>%
+  summarise(n = n()) %>%
+  kable()
+
+tidy_data %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(binwidth = 5, fill = "white", color = "black")
+```
+
+Looks like Data are really thin past 60, so cut there
+```{r filtered_data}
+filtered_data <- tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = ifelse(age > median(tidy_data$age), "older", "younger"))
+
+filtered_data %>%
+  group_by(gender, age_bin) %>%
+  summarise(n = n(), age = mean(age)) %>%
+  kable()
+```
+
+By filtering less than 60, we lost `r nrow(tidy_data) - nrow(filtered_data)` people
+
+Convert to longform
+```{r long_data}
+long_data <- filtered_data %>%
+  ungroup() %>%
+  mutate(id = 1:n()) %>%
+  gather(question, prevalence, male_high, male_low, age_high, age_low, 
+         control_high, control_low) %>%
+  separate(question, sep = "_", into = c("question", "level"))
+```
+
+Gender
+```{r gender}
+gender_outcomes <- long_data %>%
+  filter(question == "male") %>%
+  group_by(level, gender) %>%
+  tidyboot_mean(prevalence) 
+
+gender_outcomes %>%
+  ungroup() %>%
+  mutate(level = factor(level, levels = c("low", "high"),
+                        labels = c("like desserts", "watch professional sports"))) %>%
+  ggplot(aes(x = level, y = empirical_stat, ymax = ci_upper, ymin = ci_lower, 
+             color = gender, label = gender)) + 
+  geom_pointrange(position = position_dodge(.25)) +
+  #geom_dl(method =list(dl.trans(x= x -1), "first.points", cex=1)) +
+  theme(legend.position = "none") + 
+  geom_text()
+```
+
+Age
+```{r age}
+age_outcomes <- long_data %>%
+  filter(question == "age") %>%
+  group_by(level, age_bin) %>%
+  tidyboot_mean(prevalence) 
+
+age_outcomes %>%
+  ggplot(aes(x = age_bin, y = empirical_stat, ymax = ci_upper, 
+             ymin = ci_lower, color = level)) + 
+  geom_pointrange(position = position_dodge(.5))
+```
+
+Control
+```{r control}
+control_gender <- long_data %>%
+  filter(question == "control") %>%
+  group_by(level, gender) %>%
+  tidyboot_mean(prevalence) 
+
+control_age <- long_data %>%
+  filter(question == "control") %>%
+  group_by(level, age_bin) %>%
+  tidyboot_mean(prevalence) 
+
+control_gender %>%
+  ggplot(aes(x = gender, y = empirical_stat, ymax = ci_upper, ymin = ci_lower, 
+             color = level)) + 
+  geom_pointrange(position = position_dodge(.5))
+
+control_age %>%
+  ggplot(aes(x = age_bin, y = empirical_stat, ymax = ci_upper, ymin = ci_lower, 
+             color = level)) + 
+  geom_pointrange(position = position_dodge(.5))
+```
+
+Models
+```{r single_q_models}
+lmer(prevalence ~ scale(age) * level + (1|id), 
+     data = filter(long_data, question == "age")) %>%
+  summary()
+
+lmer(prevalence ~ gender * level + (1|id), 
+     data = filter(long_data, question == "male")) %>%
+  summary()
+
+lmer(prevalence ~ gender * level + age*level + (1|id), 
+     data = filter(long_data, question == "control")) %>%
+  summary()
+```
+
+
+The big model 
+```{r big_model}
+big_model <- long_data %>%
+  mutate(question = factor(question, levels = c("control", "age", "male"))) %>%
+  lmer(prevalence ~ level * age * question + level * gender * question + 
+         (1|id), data = .) %>%
+  summary()
+```
