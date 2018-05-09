@@ -13,7 +13,7 @@ header-includes:
   - \usepackage{pdfpages}
 ---
 ## Hypothesis
-In a speaker-listner interaction scenario, where the speaker utters a true generic statement '$C$(category) are $F$(feature),' we hypothesize that, when $C$ is a novel category, the listner uses her own background knowledge to infer the prevalence rate of feature $F$ in category $C$ upon hearing the generic. In our current paradigm, we provide participants a familiar category $C_{familiar}$, $C_{familiar}$ serving as background knowledge.
+In a speaker-listner interaction scenario, where the speaker utters a true generic statement '$C$(category) are $F$(feature),' we hypothesize that, when $C$ is a novel category, the listener uses her own background knowledge to infer the prevalence rate of feature $F$ in category $C$ upon hearing the generic. In our current paradigm, we provide participants a familiar category $C_{familiar}$, $C_{familiar}$ serving as background knowledge.
 
 ## Conditions
 The table below includes our feature selection, its corresponding comparison categories (chosen based on our estimate of their low, medium, and high prevalence rate) and novel categories.  
@@ -185,9 +185,71 @@ response_data_control_for_time_implicit <- response_data_implicit %>%
   filter(time_spent > 45)
 ```
 
+
+```{r}
+head(response_data_control_for_time_generic)
+head(response_filtered_yes_baseline)
+
+#with feature + type
+response_filtered_yes_baseline %>%
+  group_by(id,type, feature) %>%
+  summarize(percent_response=mean(percent_response), n()) %>%
+  group_by(feature,type) %>%
+  summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+
+#just type
+full_data_yes <- response_filtered_yes_baseline %>%
+  select(-truefalse_response) %>%
+  mutate(condition='baseline') %>%
+  bind_rows(response_data_control_for_time_generic %>% mutate(condition='generic'))
+full_data_yes_by_type <- full_data_yes %>%
+  group_by(id,type,condition) %>%
+  summarize(percent_response=mean(percent_response), n()) %>%
+  group_by(condition,type) %>%
+  summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+
+
+ggplot(data=full_data_yes_by_type, aes(x=type, y=mean, color=condition)) + 
+  geom_pointrange(aes(ymin = mean-std_err, ymax = mean+std_err), 
+                  position=position_dodge(.5)) +
+  coord_cartesian(ylim=c(0,100))
+
+# NOT FILTERING YES, ALL BASELINE
+response_data_baseline %>%
+  group_by(id,type, feature) %>%
+  summarize(percent_response=mean(percent_response), n()) %>%
+  group_by(feature,type) %>%
+  summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+
+#just type
+full_data <- response_data_baseline %>%
+  select(-truefalse_response) %>%
+  mutate(condition='baseline') %>%
+  bind_rows(response_data_control_for_time_generic %>% mutate(condition='novel'))
+full_data_by_type <- full_data %>%
+  group_by(id,type,condition) %>%
+  summarize(percent_response=mean(percent_response), n()) %>%
+  group_by(condition,type) %>%
+  summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+
+
+ggplot(data=full_data_by_type, aes(x=type, y=mean, color=condition)) + 
+  geom_pointrange(aes(ymin = mean-std_err, ymax = mean+std_err), shape = 20, size = 0.4,position=position_dodge(.5)) +
+  coord_cartesian(ylim=c(0,100)) +
+  ylab("Percent(%)") +
+  xlab("Prevalence Estimation Levels") +
+  ggtitle("Feature Prevalence Estimation(Explicit)")
+
+```
+
+
 ```{r}
 # plot - pirate
 ### baseline ###
+ggplot() + 
+  geom_pointrange(data = response_filtered_yes_baseline, mapping = (aes(x = type, y = mean(percent_response), ymin = , ymax = )) )
+
+
 p1_baseline <- ggplot(response_data_baseline, aes(x = type, y = percent_response, color = feature, fill = feature)) + 
   facet_wrap(~ feature) +
   ggtitle("Baseline - All") + 
@@ -221,14 +283,14 @@ p2_implicit <- ggplot(response_data_control_for_time_implicit, aes(x = type, y =
   geom_pirate()
 
 #### arrange graphs
-grid.arrange(p1_generic, p2_generic, ncol = 2)
-grid.arrange(p1_baseline, p2_baseline, ncol = 2)
-grid.arrange(p1_implicit, p2_implicit, ncol = 2)
+#grid.arrange(p1_generic, p2_generic, ncol = 2)
+#grid.arrange(p1_baseline, p2_baseline, ncol = 2)
+#grid.arrange(p1_implicit, p2_implicit, ncol = 2)
 # put all graphs together
-grid.arrange(p1_baseline, p2_baseline, p1_implicit, p2_implicit, p1_generic, p2_generic, ncol = 2)
+#grid.arrange(p1_baseline, p2_baseline, p1_implicit, p2_implicit, p1_generic, p2_generic, ncol = 2)
 # put baseline-all, implicit-generic time spent>45, explicit generic time spent >45
-grid.arrange(p1_baseline, p2_implicit, p2_generic, ncol = 3)
+#grid.arrange(p1_baseline, p2_implicit, p2_generic, ncol = 3)
 # put baseline-Yes, implicit-generic time spent>45, explicit generic time spent >45
-grid.arrange(p2_baseline, p2_implicit, p2_generic, ncol = 3)
+#grid.arrange(p2_baseline, p2_implicit, p2_generic, ncol = 3)
 ```
 
