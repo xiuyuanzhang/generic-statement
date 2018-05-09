@@ -23,7 +23,7 @@ theme_set(theme_classic(base_size = 14))
 ```
 
 ### Read in anonymized data
-n = 195
+
 ```{r, message = F}
 data <- read_csv("data/05022018_novel_195_anonymized_data.csv")
 ```
@@ -34,7 +34,7 @@ qualtrics_filtered <- data %>%
   filter(Q10 == "watch sports,watch cable tv,rent apartments,like deserts,drive to work,like the window seat on the plane")
 ```
 
-Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of) `r nrow(data)`
+Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data)` )
 
 Rename questions
 ```{r rename}
@@ -68,13 +68,15 @@ Looks like Data are really thin past 50, so cut there
 ```{r filtered_data}
 filtered_data <- tidy_data %>%
   filter(age < 60) %>%
-  mutate(age_bin = factor(age > mean(age), labels = c("younger", "older")))
+  mutate(age_bin = factor(age > median(age), labels = c("younger", "older")))
 
 filtered_data %>%
   group_by(gender, age_bin) %>%
-  summarise(n = n()) %>%
+  summarise(n = n(), age = mean(age)) %>%
   kable()
 ```
+
+By filtering less than 50, we lost `r nrow(tidy_data) - nrow(filtered_data)` people
 
 Convert to longform
 ```{r long_data}
@@ -94,9 +96,15 @@ gender_outcomes <- long_data %>%
   tidyboot_mean(prevalence) 
 
 gender_outcomes %>%
-  ggplot(aes(x = gender, y = empirical_stat, ymax = ci_upper, ymin = ci_lower, 
-             color = level)) + 
-  geom_pointrange(position = position_dodge(.5))
+  ungroup() %>%
+  mutate(level = factor(level, levels = c("low", "high"),
+                        labels = c("eat dessert", "watch sports"))) %>%
+  ggplot(aes(x = level, y = empirical_stat, ymax = ci_upper, ymin = ci_lower, 
+             color = gender, label = gender)) + 
+  geom_pointrange(position = position_dodge(.25)) +
+  geom_dl(method =list(dl.trans(x= x -1), "first.points", cex=1)) +
+  theme(legend.position = "none") + 
+  geom_text()
 ```
 
 Age
@@ -153,7 +161,7 @@ lmer(prevalence ~ gender * level + age*level + (1|id),
 
 The big model 
 ```{r big_model}
-long_data %>%
+big_model <- long_data %>%
   mutate(question = factor(question, levels = c("control", "age", "male"))) %>%
   lmer(prevalence ~ level * age * question + level * gender * question + 
          (1|id), data = .) %>%
