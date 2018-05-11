@@ -222,23 +222,26 @@ response_data_baseline %>%
   summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
 
 #just type
+library(tidyboot)
 full_data <- response_data_baseline %>%
   select(-truefalse_response) %>%
   mutate(condition='baseline') %>%
   bind_rows(response_data_control_for_time_generic %>% mutate(condition='novel'))
 full_data_by_type <- full_data %>%
-  group_by(id,type,condition) %>%
-  summarize(percent_response=mean(percent_response), n()) %>%
   group_by(condition,type) %>%
-  summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+  tidyboot_mean(percent_response)
+  
+  # summarize(mean=mean(percent_response), std_err=sd(percent_response)/sqrt(length(percent_response)), n())
+  
 
 
-ggplot(data=full_data_by_type, aes(x=type, y=mean, color=condition)) + 
-  geom_pointrange(aes(ymin = mean-std_err, ymax = mean+std_err), shape = 20, size = 0.4,position=position_dodge(.5)) +
-  coord_cartesian(ylim=c(0,100)) +
+ggplot(data=full_data_by_type, aes(x=type, y=mean, fill=condition)) + 
+  geom_bar(stat="identity", position="dodge")+
+    geom_linerange(aes(ymin = ci_lower, ymax = ci_upper), shape = 20, size = 0.4,position=position_dodge(.9)) +
+  coord_cartesian(ylim=c(40,100)) +
   ylab("Percent(%)") +
-  xlab("Prevalence Estimation Levels") +
-  ggtitle("Feature Prevalence Estimation(Explicit)")
+  xlab("Feature Prevalence Estimation by Level") +
+  ggtitle("Mean Feature Prevalence Estimation")
 
 ```
 
