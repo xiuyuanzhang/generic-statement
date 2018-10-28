@@ -22,7 +22,7 @@ theme_set(theme_classic(base_size = 14))
 
 ### Read in anonymized data
 ```{r, message = F}
-data <- read_csv("020818generic-anonymized-data.csv")
+data <- read_csv("data/020818generic-anonymized-data.csv")
 ```
 
 Filter out participants who didn't get attention check right
@@ -136,7 +136,7 @@ Should we handle the outliers of this data in some way?
 lm_1 <- lmer(percent_response ~ type + feature + baseline_object + (1|id), data = response_data)
 summary(lm_1)
 ```
-
+library(xtable)
 ### plot model predictions
 ```{r}
 # all participants
@@ -147,6 +147,7 @@ predicted_data1 <- response_data %>%
 ggplot(predicted_data1, aes(x = type , y = value, color = measure,fill = measure))  + 
       facet_wrap(~ feature) + 
       geom_violin(fill="white", position = position_dodge(width=1)) +
-      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7)
+      geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width=0.9), size = 0.7) +
+  ggtitle("Linear Model Prevalence Estimate Prediction")
 
 ```

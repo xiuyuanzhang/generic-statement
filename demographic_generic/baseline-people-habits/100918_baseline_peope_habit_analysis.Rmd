@@ -1,0 +1,173 @@
+---
+title: "Baseline People's Habit Survey"
+author: "Xiuyuan Zhang and Dan Yurovsky"
+date: "10/23/2018"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+library(knitr)
+library(tidyboot)
+library(Matrix)
+library(effsize)
+library(pwr)
+library(compute.es)
+
+theme_set(theme_classic(base_size = 14))
+```
+
+### Read in anonymized data
+```{r zip_data}
+zip_data <- read_csv("data/Zipcode-ZCTA-Population-Density-And-Area-Unsorted.csv") %>%
+  rename(zip = `Zip/ZCTA`, density = `Density Per Sq Mile`)
+```
+
+```{r, message = F}
+data_novel <- read_csv("data/10092018_people_habit_anonymized_data.csv")
+```
+The total number of participants we get is `r nrow(data)`. 
+
+```{r, message = F}
+attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
+
+qualtrics_filtered <- data_novel %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% attnCheckAnswers))%>%
+  filter(attnFalse==0)
+
+```
+Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data)` )
+
+Rename questions
+```{r rename, message = F}
+tidy_data <- qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  #rename(male_high = gender_watchsports_1, male_low = gender_desserts_1, age_high = age_nightlynews_1, age_low = age_onlineshopping_1, 
+         #control_high = control_drive_1, control_low = control_windowseat_1) %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) # %>%
+  #select(male_high, male_low, age_high, age_low, control_high, control_low, gender, age)
+```
+
+Basic demographics
+```{r demos, message = F}
+tidy_data %>%
+  group_by(gender) %>%
+  summarise(n = n()) %>%
+  kable()
+
+tidy_data %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(binwidth = 5, fill = "white", color = "black")
+```
+
+Looks like Data are really thin past 60, so cut there
+```{r filtered_data, message = F}
+filtered_data <- tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = ifelse(age > median(tidy_data$age), "older", "younger")) %>%
+  left_join(zip_data) %>%
+  ungroup() %>%
+  mutate(dense = factor(density > median(density, na.rm = T),
+                         labels = c("sparse", "dense")))
+
+filtered_data %>%
+  group_by(gender, age_bin) %>%
+  summarise(n = n(), age = mean(age)) %>%
+  kable()
+```
+
+By filtering less than 60, we lost `r nrow(tidy_data) - nrow(filtered_data)` people
+
+```{r effect size, message = F, warning = F}
+long_data <- filtered_data %>%
+  select(big_cities_1:drink_coffee_1,gender:politics, density, id) %>%
+  gather(question, response, big_cities_1:drink_coffee_1) %>%
+  gather(demo, status, gender:politics, density )
+
+# function to calculate the effect size for our data
+effect_size <- function(df, d, q) {
+
+  sub_df <- df %>%
+    filter(question == q, demo == d)
+  
+   if("Independent" %in% sub_df$status) {
+     sub_df <- sub_df %>%
+       filter(status %in% c("Democrat", "Republican"))
+   }
+  
+  unique_status <- distinct(sub_df, status) %>% pull()
+  
+  if(length(unique_status) > 2) {
+    cor <- cor(sub_df$response, as.numeric(sub_df$status), use = "complete") %>% abs
+    es <- res(r = cor, n = nrow(sub_df), verbose = F)
+    pw = pwr.r.test(n = nrow(sub_df),r = cor, sig.level = 0.05)
+    pw_est = pwr.r.test(r = cor, sig.level = 0.05, power = 0.8)
+  } else {
+    means <- sub_df %>%
+      group_by(status) %>%
+      summarise(mean = mean(response), sd = sd(response), n = n()) %>%
+      as.data.frame() %>%
+      arrange(desc(mean))
+    
+    es <- mes(means[1, "mean"], means[2, "mean"],
+              means[1, "sd"], means[2, "sd"],
+              means[1, "n"], means[2, "n"],
+              verbose = F)
+    pw = pwr.2p2n.test(h = es$d, n1 = means[1, "n"], 
+                       n2 =  means[2, "n"], sig.level = 0.05)
+    pw_est = pwr.2p.test(h = es$d, sig.level = 0.05, power = 0.8)
+    
+  }
+ 
+    data.frame(demographics = d, question = q, d = es$d,
+               lower = es$l.d, upper = es$u.d, pwr = pw$power, estimate_n_0.8 = pw_est$n ) %>%
+      as_data_frame()
+}
+
+# scaling the data
+scaled_data <- long_data %>%
+  group_by(demo, status) %>%
+  mutate(response = scale(response)) %>%
+  ungroup()
+    
+combinations <- expand.grid(demo = distinct(scaled_data,demo) %>% pull(),
+                           question = distinct(scaled_data,question) %>% pull()) %>%
+  mutate_all(as.character)
+
+es <- map2(combinations$demo, combinations$question, 
+     ~effect_size(scaled_data, .x, .y)) %>%
+  bind_rows() 
+
+q_ranking <- es %>%
+  group_by(question) %>%
+  summarise(d = mean(d)) %>%
+  arrange(d)
+
+d_ranking <- es %>%
+  group_by(demographics) %>%
+  summarise(d = mean(d)) %>%
+  arrange(d)
+
+es %>%
+  mutate(question = factor(question, levels = q_ranking$question),
+         demo = factor(demographics, levels = d_ranking$demographics)) %>%
+  ggplot(aes(x = question, y = d, ymin = lower, ymax = upper, color = demographics)) +
+  geom_pointrange(position = position_dodge(.5)) + 
+  theme(axis.text.x=element_text(angle=90 ,vjust = .5)) + 
+  scale_color_brewer(palette = "Set1")  +
+  coord_flip() +
+  geom_hline(aes(yintercept = 0), linetype = "dashed")
+
+```
