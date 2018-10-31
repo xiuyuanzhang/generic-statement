@@ -68,8 +68,9 @@ tidy_data %>%
   kable()
 
 tidy_data %>%
-  ggplot(aes(x = age)) + 
-  geom_histogram(binwidth = 5, fill = "white", color = "black")
+  ggplot(aes(x = log(age))) + 
+  geom_histogram(bins = 30, fill = "white", color = "black") +
+  geom_vline(xintercept = quantile(log(tidy_data$age), .95))
 ```
 
 Looks like Data are really thin past 60, so cut there

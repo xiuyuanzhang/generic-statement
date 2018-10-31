@@ -1,12 +1,14 @@
 ---
-title: "Baseline People's Habit Survey"
+title: "Preregistration for Baseline People's Habit Survey Data Collection and Analysis"
 author: "Xiuyuan Zhang and Dan Yurovsky"
-date: "10/23/2018"
+date: "10/27/2018"
 output: html_document
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+This script contains codes that we plan to use for our next collection of data on participants' prevalence estimation of people's habits. 
 
 ### Load libraries
 ```{r load_libraries, message = F, warning = F}
@@ -26,17 +28,22 @@ library(compute.es)
 theme_set(theme_classic(base_size = 14))
 ```
 
-### Read in anonymized data
+### Read in Zip Code - Population Density Data
+We read in population density data that helps us map zip code information document collected from participants to density measures. 
 ```{r zip_data}
 zip_data <- read_csv("data/Zipcode-ZCTA-Population-Density-And-Area-Unsorted.csv") %>%
   rename(zip = `Zip/ZCTA`, density = `Density Per Sq Mile`)
 ```
-
+### Read in anonymized data
+We read in anonymized data (see `103118_preregistration_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
 ```{r, message = F}
-data_novel <- read_csv("data/10092018_people_habit_anonymized_data.csv")
+data_novel <- read_csv()
 ```
-The total number of participants we get is `r nrow(data)`. 
+The total number of participants we get is `r nrow(data_novel)`. 
 
+### Applying filtering Criterion
+#### Pass attention check
+We set an attention check question at the end of our survey, asking participants to select four questions out of all questions they've seen previously in our survey. If participants fail the attention check(don't select all four correct questions), we will drop them from our sample. 
 ```{r, message = F}
 attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
 
@@ -48,20 +55,16 @@ qualtrics_filtered <- data_novel %>%
   filter(attnFalse==0)
 
 ```
-Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data)` )
+Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data_novel)` )
 
-Rename questions
+#### Gender & Age filtering
+Based on previous data, we do not have many turkers select "Other/Non-comforming" for our question on gender information. For this upcoming study, we will filter out Other/Non-conforming from our sample. Moreover, for age, the cut-off for 95 percentile in our previous data samples has been 60 years old. Since data after 60 years old becomes sparse, we will apply a cut-off of 60 years old and only include data for participants 60 years old or younger.
+
 ```{r rename, message = F}
 tidy_data <- qualtrics_filtered %>%
   filter(gender != "Other/Non-conforming") %>%
-  #rename(male_high = gender_watchsports_1, male_low = gender_desserts_1, age_high = age_nightlynews_1, age_low = age_onlineshopping_1, 
-         #control_high = control_drive_1, control_low = control_windowseat_1) %>%
-  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) # %>%
-  #select(male_high, male_low, age_high, age_low, control_high, control_low, gender, age)
-```
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
 
-Basic demographics
-```{r demos, message = F}
 tidy_data %>%
   group_by(gender) %>%
   summarise(n = n()) %>%
@@ -70,10 +73,7 @@ tidy_data %>%
 tidy_data %>%
   ggplot(aes(x = age)) + 
   geom_histogram(binwidth = 5, fill = "white", color = "black")
-```
 
-Looks like Data are really thin past 60, so cut there
-```{r filtered_data, message = F}
 filtered_data <- tidy_data %>%
   filter(age < 60) %>%
   mutate(age_bin = ifelse(age > median(tidy_data$age), "older", "younger")) %>%
@@ -87,25 +87,43 @@ filtered_data %>%
   summarise(n = n(), age = mean(age)) %>%
   kable()
 ```
+By filtering to participants who selected "Other/Non-conforming" for gender, we lost `r nrow(qualtrics_filtered) - nrow(tidy_data)` people.
 
-By filtering less than 60, we lost `r nrow(tidy_data) - nrow(filtered_data)` people
+By filtering to participants younger than 60 years old, we lost `r nrow(tidy_data) - nrow(filtered_data)` people
 
-```{r effect size, message = F, warning = F}
+
+### Exploratory Data Analysis
+#### Scaling Data
+From our previous data, we found that participants from different demographic groups have the tendency to scale their responses differently. Since we want to measure differences in participants' percentage judgement due to possible different background information rather than differences caused by their scaling differences, we will scale participant responses with regard to each of the demographic groups. 
+
+```{r scaling data, message = F, warning = F}
+# organize data in long format
 long_data <- filtered_data %>%
   select(big_cities_1:drink_coffee_1,gender:politics, density, id) %>%
   gather(question, response, big_cities_1:drink_coffee_1) %>%
   gather(demo, status, gender:politics, density )
 
+# scaling the data
+scaled_data <- long_data %>%
+  group_by(demo, status) %>%
+  mutate(response = scale(response)) %>%
+  ungroup()
+
+combinations <- expand.grid(demo = distinct(scaled_data,demo) %>% pull(),
+                           question = distinct(scaled_data,question) %>% pull()) %>%
+  mutate_all(as.character)
+
+```
+
+
+#### Analyze effect size
+To analyze the effect size of our result, we will apply the following function. For continuous variables, we compute the effect size and power for Pearson correlation at significant level = 0.05, and compute the sample size needed to reach power = 0.8,significant level = 0.05; for discrete variables, we compute the effect size and power using Cohen's d at significant level = 0.05, and compute the sample size needed to reach power = 0.8,significant level = 0.05.
+```{r effect size, message = F, warning = F}
 # function to calculate the effect size for our data
 effect_size <- function(df, d, q) {
 
   sub_df <- df %>%
     filter(question == q, demo == d)
-  
-   if("Independent" %in% sub_df$status) {
-     sub_df <- sub_df %>%
-       filter(status %in% c("Democrat", "Republican"))
-   }
   
   unique_status <- distinct(sub_df, status) %>% pull()
   
@@ -135,16 +153,6 @@ effect_size <- function(df, d, q) {
                lower = es$l.d, upper = es$u.d, pwr = pw$power, estimate_n_0.8 = pw_est$n ) %>%
       as_data_frame()
 }
-
-# scaling the data
-scaled_data <- long_data %>%
-  group_by(demo, status) %>%
-  mutate(response = scale(response)) %>%
-  ungroup()
-    
-combinations <- expand.grid(demo = distinct(scaled_data,demo) %>% pull(),
-                           question = distinct(scaled_data,question) %>% pull()) %>%
-  mutate_all(as.character)
 
 es <- map2(combinations$demo, combinations$question, 
      ~effect_size(scaled_data, .x, .y)) %>%
