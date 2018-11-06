@@ -24,7 +24,7 @@ library(Matrix)
 library(effsize)
 library(pwr)
 library(compute.es)
-
+library(janitor)
 theme_set(theme_classic(base_size = 14))
 ```
 
@@ -37,7 +37,7 @@ zip_data <- read_csv("data/Zipcode-ZCTA-Population-Density-And-Area-Unsorted.csv
 ### Read in anonymized data
 We read in anonymized data (see `103118_preregistration_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
 ```{r, message = F}
-data_novel <- read_csv()
+data_novel <- read_csv("data/10312018_people_habit_anonymized_data.csv")
 ```
 The total number of participants we get is `r nrow(data_novel)`. 
 
@@ -76,15 +76,18 @@ tidy_data %>%
 
 filtered_data <- tidy_data %>%
   filter(age < 60) %>%
-  mutate(age_bin = ifelse(age > median(tidy_data$age), "older", "younger")) %>%
+  mutate(age_bin = if_else(age > median(tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(tidy_data$politics_1), 
+                                "conservative", "liberal")) %>%
   left_join(zip_data) %>%
   ungroup() %>%
+  filter(!is.na(density)) %>%
   mutate(dense = factor(density > median(density, na.rm = T),
                          labels = c("sparse", "dense")))
 
 filtered_data %>%
-  group_by(gender, age_bin) %>%
-  summarise(n = n(), age = mean(age)) %>%
+  group_by(gender, age_bin, politics_bin) %>%
+  summarise(n = n(), age = mean(age), politics = mean(politics_1)) %>%
   kable()
 ```
 By filtering to participants who selected "Other/Non-conforming" for gender, we lost `r nrow(qualtrics_filtered) - nrow(tidy_data)` people.
@@ -99,9 +102,9 @@ From our previous data, we found that participants from different demographic gr
 ```{r scaling data, message = F, warning = F}
 # organize data in long format
 long_data <- filtered_data %>%
-  select(big_cities_1:drink_coffee_1,gender:politics, density, id) %>%
-  gather(question, response, big_cities_1:drink_coffee_1) %>%
-  gather(demo, status, gender:politics, density )
+  select(big_cities_1:drink_coffee_1,gender, age_bin, politics_bin, dense, id) %>%
+  gather(question, response, big_cities_1:drink_coffee_1) #%>%
+#  gather(demo, status, gender:dense)
 
 # scaling the data
 scaled_data <- long_data %>%
@@ -116,12 +119,49 @@ combinations <- expand.grid(demo = distinct(scaled_data,demo) %>% pull(),
 ```
 
 
+```{r}
+
+group_data <- long_data %>%
+  group_by(gender, age_bin, politics_bin, dense, id) %>%
+ # mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, dense, question) %>%
+  summarise(mean = mean(response), sd = sd(response), n = n()) %>%
+  arrange(question) %>%
+  group_by(question) %>%
+  arrange(question, mean)
+
+q_data <- group_data %>%
+  group_by(question) %>%
+  summarise(range = diff(range(mean)), sd = mean(sd)) %>%
+  arrange(range)
+
+q_data %>%
+  View()
+
+group_data %>%
+  View()
+
+big_mer <- long_data %>%
+  lmer(response ~ question * gender + question * age_bin + question * politics_bin + 
+         question * dense + (1|id), data = .)
+
+summary(big_mer)$coefficients %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  as_data_frame() %>%
+  clean_names() %>%
+  select(-df) %>%
+  filter(str_detect(rowname, ":")) %>%
+  arrange(desc(abs(t_value))) %>%
+  View()
+
+```
 #### Analyze effect size
 To analyze the effect size of our result, we will apply the following function. For continuous variables, we compute the effect size and power for Pearson correlation at significant level = 0.05, and compute the sample size needed to reach power = 0.8,significant level = 0.05; for discrete variables, we compute the effect size and power using Cohen's d at significant level = 0.05, and compute the sample size needed to reach power = 0.8,significant level = 0.05.
 ```{r effect size, message = F, warning = F}
 # function to calculate the effect size for our data
 effect_size <- function(df, d, q) {
-
+  
   sub_df <- df %>%
     filter(question == q, demo == d)
   
@@ -143,14 +183,14 @@ effect_size <- function(df, d, q) {
               means[1, "sd"], means[2, "sd"],
               means[1, "n"], means[2, "n"],
               verbose = F)
-    pw = pwr.2p2n.test(h = es$d, n1 = means[1, "n"], 
-                       n2 =  means[2, "n"], sig.level = 0.05)
-    pw_est = pwr.2p.test(h = es$d, sig.level = 0.05, power = 0.8)
+    # pw = pwr.2p2n.test(h = es$d, n1 = means[1, "n"], 
+    #                    n2 =  means[2, "n"], sig.level = 0.05)
+    # pw_est = pwr.2p.test(h = es$d, sig.level = 0.05, power = 0.8)
     
   }
  
     data.frame(demographics = d, question = q, d = es$d,
-               lower = es$l.d, upper = es$u.d, pwr = pw$power, estimate_n_0.8 = pw_est$n ) %>%
+               lower = es$l.d, upper = es$u.d)%>%#, pwr = pw$power, estimate_n_0.8 = pw_est$n ) %>%
       as_data_frame()
 }
 
@@ -179,3 +219,31 @@ es %>%
   geom_hline(aes(yintercept = 0), linetype = "dashed")
 
 ```
+
+```{r sample effect}
+
+error <- 1
+
+sample_200 <- long_data %>%
+  group_by(question) %>%
+  sample_n(200, replace = T) %>%
+  group_by(gender, age_bin, politics_bin, dense, question) %>%
+  summarise(response = mean(response)) %>%
+  mutate(response = response + rnorm(n(), 0, error)) %>%
+  mutate(type = "sample")
+
+cor_data <- long_data %>%
+  group_by(gender, age_bin, politics_bin, dense, question) %>%
+  summarise(response = mean(response)) %>%
+  mutate(type = "original") %>%
+  bind_rows(sample_200) %>%
+  spread(type, response) %>%
+  group_by(question) %>%
+  summarise(cor = cor(original, sample, use = "complete")) %>%
+  summarise(cor = mean(cor))
+
+
+
+
+```
+
