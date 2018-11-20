@@ -164,6 +164,6 @@ The big model
 big_model <- long_data %>%
   mutate(question = factor(question, levels = c("control", "age", "male"))) %>%
   lmer(prevalence ~ level * age * question + level * gender * question + 
-         (1|id), data = .) %>%
-  summary()
+         (1|id), data = .)
+summary(big_model)
 ```
