@@ -1,7 +1,7 @@
 ---
 title: "Preregistration for Baseline People's Habit Survey Data Collection and Analysis"
 author: "Xiuyuan Zhang and Dan Yurovsky"
-date: "10/27/2018"
+date: "11/19/2018"
 output: html_document
 ---
 ```{r setup, include=FALSE}
@@ -145,15 +145,48 @@ big_mer <- long_data %>%
   lmer(response ~ question * gender + question * age_bin + question * politics_bin + 
          question * dense + (1|id), data = .)
 
-summary(big_mer)$coefficients %>%
+dummy_summary <- summary(big_mer)$coefficients %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   as_data_frame() %>%
   clean_names() %>%
-  select(-df) %>%
+  #select(-df) %>%
   filter(str_detect(rowname, ":")) %>%
   arrange(desc(abs(t_value))) %>%
   View()
+
+
+long_data_copy <- long_data
+
+k <- length(unique(long_data_copy$question)) #the number of unique factors for the categorical variable
+ls_question <- unique(long_data_copy$question)
+
+long_data_copy$question.f = factor(long_data_copy$question, labels = ls_question)
+
+contrasts(long_data_copy$question.f) <- contr.sum(k)
+
+dev_coding <- lmer(response ~ question.f * gender + question.f * age_bin + 
+                     question.f * politics_bin +  question.f * dense + 
+                     (1|id), data = long_data_copy)
+
+View(tapply(long_data_copy$response, long_data_copy$question.f, mean))
+
+question_levels <- data_frame(question = levels(long_data_copy$question.f),
+                              level = paste0("question.f", 1:15))
+
+
+dev_summary <- summary(dev_coding)$coefficients %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  as_data_frame() %>%
+  clean_names() %>%
+  #select(-df) %>%
+  filter(str_detect(rowname, ":")) %>%
+  arrange(desc(abs(t_value))) %>%
+  separate(rowname, into = c("level", "demographic"), sep = ":") %>%
+  left_join(question_levels) %>%
+  select(question, demographic, estimate, std_error, t_value)
+
 
 ```
 #### Analyze effect size
@@ -246,4 +279,3 @@ cor_data <- long_data %>%
 
 
 ```
-
