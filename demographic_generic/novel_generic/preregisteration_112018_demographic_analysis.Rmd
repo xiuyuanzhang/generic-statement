@@ -2,11 +2,17 @@
 title: Data Collection and Analysis Pre-registration for Novel Generics on People’s
   Habits
 author: "Xiuyuan Zhang and Dan Yurovsky"
-date: "11/20/2018"
+date: "11/21/2018"
 output: html_document
 ---
 
 This script contains codes that we plan to use for our next collection of data on participants' prevalence estimation of people's habits from novel countries. 
+
+We plan to collect data from 400 participants.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ### Load libraries
 ```{r load_libraries, message = F, warning = F}
@@ -29,18 +35,14 @@ theme_set(theme_classic(base_size = 14))
 
 ### Read in Zip Code - Population Density Data
 We read in population density data that helps us map zip code information document collected from participants to density measures. 
-```{r zip_data}
+```{r zip_data, message = F, warning = F}
 zip_data <- read_csv("../baseline-people-habits/data/Zipcode-ZCTA-Population-Density-And-Area-Unsorted.csv") %>%
   rename(zip = `Zip/ZCTA`, density = `Density Per Sq Mile`)
 ```
 ### Read in anonymized data
-We read in anonymized data (see `103118_preregistration_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
-```{r, message = F}
-data_new <- read_csv("data/dummy_run.csv") %>%
-  slice(-1:-2)%>% #need to remove
-  mutate(id = 1:n()) #need to remove
-data_new$age <- as.numeric(data_new$age) #need to remove
-data_new$politics_1 <- as.numeric(data_new$politics_1) #need to remove
+We read in anonymized data (see `preregisteration_112118_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
+```{r, message = F, warning = F}
+data_new <- read_csv("data/11212018_people_novel_habit_anonymized_data.csv") 
 data_old <- read_csv("../baseline-people-habits/data/10312018_people_habit_anonymized_data.csv")
 ```
 The total number of participants we get from this new collection of data is `r nrow(data_new)`. 
@@ -49,13 +51,12 @@ The total number of participants we get from this new collection of data is `r n
 #### Pass attention check
 We set an attention check question at the end of our survey, asking participants to select four questions out of all questions they've seen previously in our survey. If participants fail the attention check(don't select all four correct questions), we will drop them from our sample.
 
-
 #### Gender & Age filtering
 Below, we first show that, in a previous collection of data, the distribuition of participants after 60 years old becomes sparse. The 94 percentile in our previous data samples has been 60 years old. We will then apply a cut-off of 60 years old for this new data and only include data for participants with age younger than 60 years old.  
 
 Based on previous data, we do not have many turkers select "Other/Non-comforming" for our question on gender information(3 out of 773). For this upcoming study, we will filter out Other/Non-conforming from our sample.
 
-```{r process old data, message = F}
+```{r process old data, message = F, warning = F}
 # filter by condition: passing attention check
 old_attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
 
@@ -69,8 +70,8 @@ old_qualtrics_filtered <- data_old %>%
 # showing the basic count for demographic information
 old_qualtrics_filtered %>%
   group_by(gender) %>%
-  summarise(n = n()) %>%
-  View()
+  summarise(n = n())%>%
+  kable()
 
 old_qualtrics_filtered %>%
   ggplot(aes(x = age)) + 
@@ -102,7 +103,7 @@ old_filtered_data <- old_tidy_data %>%
 ```
 
 
-```{r filter new data, message = F}
+```{r filter new data, message = F, warning = F}
 new_attnCheckAnswers <- c('like big cities','cook at home', 'go to the gym', 'consume dairy products')
 
 new_qualtrics_filtered <- data_new %>%
@@ -115,7 +116,7 @@ new_qualtrics_filtered <- data_new %>%
 ```
 Filter peole who passed the attention check, result: n = `r nrow(new_qualtrics_filtered)` (out of `r nrow(data_new)` )
 
-```{r rename, message = F}
+```{r rename, message = F, warning = F}
 new_tidy_data <- new_qualtrics_filtered %>%
   filter(gender != "Other/Non-conforming") %>%
   mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) 
@@ -162,12 +163,10 @@ new_long_data <- new_filtered_data %>%
   select(big_cities_1:news_phone_1, 
          gender, age_bin, politics_bin, dense, id)%>%
   gather(question, response, big_cities_1:news_phone_1)
-
-new_long_data$response = as.numeric(new_long_data$response) #need to remove
 ```
 
 #### analyze the correlation between previous data and incoming data
-```{r}
+```{r message = F, warning = F}
 new_data <- new_long_data %>% 
   group_by(id) %>%
   mutate(response = scale(response)) %>%
@@ -185,7 +184,7 @@ old_data <- old_long_data %>%
 all_data <- bind_rows(new_data, old_data) %>%
   group_by(question) %>%
   spread(data, mean) %>%
-  summarise(cor = cor(new, old))
+  summarise(cor = cor(new, old, use = "complete"))
 
 t.test(all_data$cor)
 ```
