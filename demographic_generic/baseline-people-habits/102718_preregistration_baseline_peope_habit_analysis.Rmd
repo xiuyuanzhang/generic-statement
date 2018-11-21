@@ -25,6 +25,7 @@ library(effsize)
 library(pwr)
 library(compute.es)
 library(janitor)
+library(tidyboot)
 theme_set(theme_classic(base_size = 14))
 ```
 
@@ -152,7 +153,7 @@ dummy_summary <- summary(big_mer)$coefficients %>%
   clean_names() %>%
   #select(-df) %>%
   filter(str_detect(rowname, ":")) %>%
-  arrange(desc(abs(t_value))) %>%
+ # arrange(desc(abs(t_value))) %>%
   View()
 
 
@@ -276,6 +277,96 @@ cor_data <- long_data %>%
   summarise(cor = mean(cor))
 
 
+cor_sample <- function() {
+  
+  half_ids <- long_data %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.25)
+  
+  long_data %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, dense, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete")) %>%
+    summarise(mean = mean(cor, na.rm = T)) %>%
+    pull()
+}
 
 
+samples <- replicate(100, cor_sample())
+
+ggplot(samples, aes(x = value)) + 
+  geom_histogram() + 
+  geom_vline(aes(xintercept = quantile(value, .025))) +
+  geom_vline(aes(xintercept = quantile(value, .975)))
+
+cor_byq_sample <- function() {
+  
+  half_ids <- long_data %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.5)
+  
+  long_data %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, dense, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete"))
+}
+
+
+samples <- replicate(1000, cor_byq_sample(), simplify = F)
+
+cis <- samples %>%
+  bind_rows() %>%
+  group_by(question) %>%
+  summarise(mean = mean(cor),
+            ci_lower = quantile(cor, .025), 
+            ci_upper = quantile(cor, .975))
+
+cis %>% arrange(desc(ci_lower)) %>% View()
+
+
+samples %>%
+  bind_rows() %>%
+  ggplot(aes(x = cor)) + 
+  facet_wrap(~question) +
+  geom_histogram()
+```
+
+To run
+```{r}
+#any binary splits, use values from old data
+new_data <- long_data %>% #Actually from the new data
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, dense, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "new")
+
+old_data <- long_data %>% # ACtually from this run of data
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, dense, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+
+all_data <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old))
+
+t.test(all_data$cor)
 ```

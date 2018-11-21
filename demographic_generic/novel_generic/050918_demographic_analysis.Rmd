@@ -46,7 +46,7 @@ c('watch nightly news on tv', 'like online shopping', 'wahoo') %in% attnCheckAns
 
 ```
 I did not adminster the attention check question in a format that is correct, so we are seeing if we adjust the passing criteria, what would be result.
-Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data)` )
+Filter peole who passed the attention check, result: n = `r nrow(qualtrics_filtered)` (out of `r nrow(data_novel)` )
 
 Rename questions
 ```{r rename}
@@ -74,8 +74,8 @@ tidy_data %>%
 Looks like Data are really thin past 60, so cut there
 ```{r filtered_data}
 filtered_data <- tidy_data %>%
-  filter(age < 60) %>%
-  mutate(age_bin = ifelse(age > median(tidy_data$age), "older", "younger"))
+  filter(age < 50) %>%
+  mutate(age_bin = ifelse(age >= median(tidy_data$age), "older", "younger"))
 
 filtered_data %>%
   group_by(gender, age_bin) %>%
@@ -168,7 +168,7 @@ lmer(prevalence ~ gender * level + age*level + (1|id),
 
 The big model 
 ```{r big_model}
-big_model <- long_data %>%
+long_data %>%
   mutate(question = factor(question, levels = c("control", "age", "male"))) %>%
   lmer(prevalence ~ level * age * question + level * gender * question + 
          (1|id), data = .) %>%

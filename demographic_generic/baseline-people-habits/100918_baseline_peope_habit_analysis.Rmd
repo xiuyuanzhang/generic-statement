@@ -136,6 +136,19 @@ effect_size <- function(df, d, q) {
                lower = es$l.d, upper = es$u.d, pwr = pw$power, estimate_n_0.8 = pw_est$n ) %>%
       as_data_frame()
 }
+```
+
+```{r}
+big_mer <- long_data %>%
+  lmer(response ~ question*status + (1|id), data = .)
+
+big_mer %>%
+  tidy() %>%
+  filter(str_detect(term, ":")) %>%
+  arrange(desc(abs(statistic))) %>%
+  View()
+
+```
 
 # scaling the data
 scaled_data <- long_data %>%
