@@ -305,8 +305,31 @@ ggplot(samples, aes(x = value)) +
   geom_histogram() + 
   geom_vline(aes(xintercept = quantile(value, .025))) +
   geom_vline(aes(xintercept = quantile(value, .975)))
+```
 
-cor_byq_sample <- function() {
+
+For every possible subset of questions
+  Do the by_q correlation to get a split_half reliability for each question
+  t-test those
+  return (t-value, pvalue)
+  
+Select the subset of questions that minimizes the p-value
+
+```{r}
+qs <- long_data %>%
+  distinct(question) %>%
+  pull()
+
+six <- combn(qs, 6) %>%
+  t() %>%
+  as_data_frame() 
+
+
+```
+
+Correlation analysis
+```{r}
+cor_byq_sample <- function(row) {
   
   half_ids <- long_data %>%
     select(id) %>%
@@ -314,6 +337,7 @@ cor_byq_sample <- function() {
     sample_frac(.5)
   
   long_data %>%
+    filter(question %in% slice(six, row) %>% unlist(use.names = F)) %>%
     group_by(id) %>%
     mutate(response = scale(response)) %>%
     ungroup() %>%
@@ -326,23 +350,23 @@ cor_byq_sample <- function() {
 }
 
 
-samples <- replicate(1000, cor_byq_sample(), simplify = F)
+get_ts <- function(row) {
+  
+  samples <- replicate(100, cor_byq_sample(row), simplify = F)
 
-cis <- samples %>%
-  bind_rows() %>%
-  group_by(question) %>%
-  summarise(mean = mean(cor),
-            ci_lower = quantile(cor, .025), 
-            ci_upper = quantile(cor, .975))
+  samples %>%
+    bind_rows(.id = "sample") %>%
+    group_by(sample) %>%
+    summarise(t = t.test(cor)$statistic,
+              p = t.test(cor)$p.value) %>%
+   summarise(t = mean(t), sig_ps = mean(p < .05))
+}
 
-cis %>% arrange(desc(ci_lower)) %>% View()
+ts <- map(1:nrow(six), ~get_ts(.x)) %>%
+  bind_rows(.id = "row") %>%
+  bind_cols(six)
 
-
-samples %>%
-  bind_rows() %>%
-  ggplot(aes(x = cor)) + 
-  facet_wrap(~question) +
-  geom_histogram()
+write_csv(ts, "ts.csv")
 ```
 
 To run
