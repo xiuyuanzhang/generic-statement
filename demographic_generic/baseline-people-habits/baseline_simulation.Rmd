@@ -1,0 +1,174 @@
+---
+title: "Simulation for Collecting Novel Generic Data"
+author: "Xiuyuan Zhang and Dan Yurovsky"
+date: "12/10/2018"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script contains codes that we plan to use for our next collection of data on participants' prevalence estimation of people's habits. 
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+library(knitr)
+library(tidyboot)
+library(Matrix)
+library(effsize)
+library(pwr)
+library(compute.es)
+library(janitor)
+library(tidyboot)
+theme_set(theme_classic(base_size = 14))
+```
+
+### Read in anonymized data
+We read in anonymized data (see `103118_preregistration_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
+```{r, message = F}
+data_novel <- read_csv("data/10312018_people_habit_anonymized_data.csv")
+```
+
+### Applying filtering Criterion
+#### Pass attention check
+We set an attention check question at the end of our survey, asking participants to select four questions out of all questions they've seen previously in our survey. If participants fail the attention check(don't select all four correct questions), we will drop them from our sample. 
+```{r, message = F}
+attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
+
+qualtrics_filtered <- data_novel %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% attnCheckAnswers))%>%
+  filter(attnFalse==0)
+
+```
+
+```{r rename, message = F}
+tidy_data <- qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
+
+filtered_data <- tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(tidy_data$politics_1), 
+                                "conservative", "liberal")) 
+
+long_data <- filtered_data %>%
+  select(big_cities_1:drink_coffee_1,gender, age_bin, politics_bin, id) %>%
+  gather(question, response, big_cities_1:drink_coffee_1)
+```
+
+For every possible subset of questions:
+
+Do the by_q correlation to get a split_half reliability for each question, t-test those, return (t-value, pvalue)
+  
+Select the subset of questions that minimizes the p-value
+
+```{r possible combinations}
+qs <- long_data %>%
+  distinct(question) %>%
+  pull()
+
+# 12 chooses 6
+six <- combn(qs, 6) %>%
+  t() %>%
+  as_data_frame()
+
+# 12 chooses 8
+eight <- combn(qs, 8) %>%
+  t() %>%
+  as_data_frame()
+```
+
+Correlation analysis
+```{r}
+# 12 choose 6
+cor_byq_sample <- function(row) {
+  
+  half_ids <- long_data %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.5)
+  
+  long_data %>%
+    filter(question %in% slice(six, row) %>% unlist(use.names = F)) %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete"))
+}
+
+get_ts <- function(row) {
+  
+  samples <- replicate(100, cor_byq_sample(row), simplify = F)
+
+  samples %>%
+    bind_rows(.id = "sample") %>%
+    group_by(sample) %>%
+    summarise(t = t.test(cor)$statistic,
+              p = t.test(cor)$p.value) %>%
+   summarise(t = mean(t), sig_ps = mean(p < .05))
+}
+
+ts_ps <- map(1:nrow(six), ~get_ts(.x)) %>%
+  bind_rows(.id = "row") %>%
+  bind_cols(six)
+
+write_csv(ts_ps, "6outof12_ts.csv")
+# 09:37 AM Wed starts - 
+```
+
+```{r}
+# 12 choose 8
+cor_byq_sample <- function(row) {
+  
+  half_ids <- long_data %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.5)
+  
+  long_data %>%
+    filter(question %in% slice(eight, row) %>% unlist(use.names = F)) %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete"))
+}
+
+get_ts <- function(row) {
+  
+  samples <- replicate(100, cor_byq_sample(row), simplify = F)
+
+  samples %>%
+    bind_rows(.id = "sample") %>%
+    group_by(sample) %>%
+    summarise(t = t.test(cor)$statistic,
+              p = t.test(cor)$p.value) %>%
+   summarise(t = mean(t), sig_ps = mean(p < .05))
+}
+
+ts_ps <- map(1:nrow(eight), ~get_ts(.x)) %>%
+  bind_rows(.id = "row") %>%
+  bind_cols(eight)
+
+write_csv(ts_ps, "8outof12_ts.csv")
+```
+
