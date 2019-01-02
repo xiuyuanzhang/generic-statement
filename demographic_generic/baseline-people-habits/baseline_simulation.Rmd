@@ -35,6 +35,13 @@ We read in anonymized data (see `103118_preregistration_process_raw_data.R` for 
 data_novel <- read_csv("data/10312018_people_habit_anonymized_data.csv")
 ```
 
+```{r, message = F}
+zip_data <- zip_data <- read_csv("data/Zipcode-ZCTA-Population-Density-And-Area-Unsorted.csv") %>%
+  rename(zip = `Zip/ZCTA`, density = `Density Per Sq Mile`)
+```
+
+
+
 ### Applying filtering Criterion
 #### Pass attention check
 We set an attention check question at the end of our survey, asking participants to select four questions out of all questions they've seen previously in our survey. If participants fail the attention check(don't select all four correct questions), we will drop them from our sample. 
@@ -55,6 +62,7 @@ tidy_data <- qualtrics_filtered %>%
   filter(gender != "Other/Non-conforming") %>%
   mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
 
+### without dense var ###
 filtered_data <- tidy_data %>%
   filter(age < 60) %>%
   mutate(age_bin = if_else(age > median(tidy_data$age), "older", "younger"),
@@ -64,6 +72,22 @@ filtered_data <- tidy_data %>%
 long_data <- filtered_data %>%
   select(big_cities_1:drink_coffee_1,gender, age_bin, politics_bin, id) %>%
   gather(question, response, big_cities_1:drink_coffee_1)
+
+### with dense var ###
+filtered_data_dense <- tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(tidy_data$politics_1), 
+                                "conservative", "liberal")) %>%
+  left_join(zip_data) %>%
+  ungroup() %>%
+  filter(!is.na(density)) %>%
+  mutate(dense = factor(density > median(density, na.rm = T),
+                         labels = c("sparse", "dense")))
+long_data_dense <- filtered_data_dense %>%
+  select(big_cities_1:drink_coffee_1,gender, age_bin, politics_bin, dense, id) %>%
+  gather(question, response, big_cities_1:drink_coffee_1)
+
 ```
 
 For every possible subset of questions:
@@ -89,6 +113,7 @@ eight <- combn(qs, 8) %>%
 ```
 
 Correlation analysis
+1. Without dense variable
 ```{r}
 # 12 choose 6
 cor_byq_sample <- function(row) {
@@ -170,5 +195,92 @@ ts_ps <- map(1:nrow(eight), ~get_ts(.x)) %>%
   bind_cols(eight)
 
 write_csv(ts_ps, "8outof12_ts.csv")
+```
+
+
+2. With dense variable
+```{r}
+# 12 choose 6
+cor_byq_sample <- function(row) {
+  
+  half_ids <- long_data_dense %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.5)
+  
+  long_data_dense %>%
+    filter(question %in% slice(six, row) %>% unlist(use.names = F)) %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, dense, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete"))
+}
+
+get_ts <- function(row) {
+  
+  samples <- replicate(100, cor_byq_sample(row), simplify = F)
+
+  samples %>%
+    bind_rows(.id = "sample") %>%
+    group_by(sample) %>%
+    summarise(t = t.test(cor)$statistic,
+              p = t.test(cor)$p.value) %>%
+   summarise(t = mean(t), sig_ps = mean(p < .05))
+}
+
+ts_ps <- map(1:nrow(six), ~get_ts(.x)) %>%
+  bind_rows(.id = "row") %>%
+  bind_cols(six)
+
+write_csv(ts_ps, "dense_6outof12_ts.csv")
+# Fri 12:58PM starts - Sun 2:55AM
+```
+
+
+```{r}
+# 12 choose 8
+cor_byq_sample <- function(row) {
+  
+  half_ids <- long_data_dense %>%
+    select(id) %>%
+    distinct() %>%
+    sample_frac(.5)
+  
+  long_data_dense %>%
+    filter(question %in% slice(eight, row) %>% unlist(use.names = F)) %>%
+    group_by(id) %>%
+    mutate(response = scale(response)) %>%
+    ungroup() %>%
+    mutate(half = if_else(id %in% half_ids$id, "first", "second")) %>%
+    group_by(half, gender, age_bin, politics_bin, dense, question) %>%
+    summarise(mean = mean(response)) %>%
+    spread(half, mean) %>%
+    group_by(question) %>%
+    summarise(cor = cor(first, second, use = "complete"))
+}
+
+get_ts <- function(row) {
+  
+  samples <- replicate(100, cor_byq_sample(row), simplify = F)
+
+  samples %>%
+    bind_rows(.id = "sample") %>%
+    group_by(sample) %>%
+    summarise(t = t.test(cor)$statistic,
+              p = t.test(cor)$p.value) %>%
+   summarise(t = mean(t), sig_ps = mean(p < .05))
+}
+
+ts_ps <- map(1:nrow(eight), ~get_ts(.x)) %>%
+  bind_rows(.id = "row") %>%
+  bind_cols(eight)
+
+write_csv(ts_ps, "dense_8outof12_ts.csv")
+
 ```
 
