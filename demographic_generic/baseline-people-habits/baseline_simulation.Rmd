@@ -284,3 +284,23 @@ write_csv(ts_ps, "dense_8outof12_ts.csv")
 
 ```
 
+
+```{r simulation analysis}
+dense_6 <- read.csv("dense_6outof12_ts.csv") 
+dense_8 <- read.csv("dense_8outof12_ts.csv")
+no_dense_6 <- read.csv("6outof12_ts.csv")
+no_dense_8 <- read.csv("8outof12_ts.csv")
+
+sorted_dense_6 <- arrange(dense_6, desc(sig_ps), desc(t))
+sorted_dense_6 <- slice(sorted_dense_6, 1:15)
+
+sorted_dense_8 <- arrange(dense_8, desc(sig_ps), desc(t))
+sorted_dense_8 <- slice(sorted_dense_8, 1:15)
+
+sorted_6 <- arrange(no_dense_6, desc(sig_ps), desc(t))
+sorted_6 <- slice(sorted_6, 1:15)
+
+sorted_8 <- arrange(no_dense_8, desc(sig_ps), desc(t))
+sorted_8 <- slice(sorted_8, 1:15)
+```
+
