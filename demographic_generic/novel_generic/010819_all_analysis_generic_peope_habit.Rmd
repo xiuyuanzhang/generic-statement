@@ -282,4 +282,28 @@ no_dense_8 %>%
   select(-n) %>%
   spread(measure, value) %>%
   arrange(desc(t)) %>% View()
+  
+
 ```
+
+Looking at the distribution for "listen to podcast" question
+```{r}
+new_long_data %>%
+  filter(question == "podcast_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  ggtitle("Density Distribution - Responses to listen to podcasts")
+
+
+new_long_data %>%
+  filter(question == "computer_preference_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  ggtitle("Density Distribution - Responses to Macs over PCs")
+
+```
+
