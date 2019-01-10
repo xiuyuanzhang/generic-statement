@@ -294,7 +294,17 @@ new_long_data %>%
   geom_density() + 
   geom_vline(aes(xintercept = mean(response)), 
              linetype = "dashed", size = 0.6) + 
-  ggtitle("Density Distribution - Responses to listen to podcasts")
+  ggtitle("(Novel) Density Distribution - Responses to listen to podcasts")
+
+
+
+old_long_data %>%
+  filter(question == "podcast_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  ggtitle("(Baseline) Density Distribution - Responses to listen to podcasts")
 
 
 new_long_data %>%
@@ -303,7 +313,18 @@ new_long_data %>%
   geom_density() + 
   geom_vline(aes(xintercept = mean(response)), 
              linetype = "dashed", size = 0.6) + 
-  ggtitle("Density Distribution - Responses to Macs over PCs")
+  ggtitle("(Novel) Density Distribution - Responses to Macs over PCs")
+
+old_long_data %>%
+  filter(question == "computer_preference_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  ggtitle("(Baseline) Density Distribution - Responses to Macs over PCs")
+
+
+
 
 ```
 
