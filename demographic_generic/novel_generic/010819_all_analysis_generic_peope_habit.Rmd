@@ -288,6 +288,8 @@ no_dense_8 %>%
 
 Looking at the distribution for "listen to podcast" question
 ```{r}
+### Podcast ###
+# all
 new_long_data %>%
   filter(question == "podcast_1")%>%
   ggplot(aes(x = response)) + 
@@ -296,8 +298,27 @@ new_long_data %>%
              linetype = "dashed", size = 0.6) + 
   ggtitle("(Novel) Density Distribution - Responses to listen to podcasts")
 
+# separate groups
+new_long_data %>%
+  filter(question == "podcast_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  facet_wrap(~age_bin + gender + politics_bin) + 
+  ggtitle("(Novel) Density Distribution by Group - Responses to listen to podcasts")
 
+# all
+old_long_data %>%
+  filter(question == "podcast_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  facet_wrap(~age_bin + gender + politics_bin) + 
+  ggtitle("(Old) Density Distribution by Group - Responses to listen to podcasts")
 
+# separate groups
 old_long_data %>%
   filter(question == "podcast_1")%>%
   ggplot(aes(x = response)) + 
@@ -306,6 +327,8 @@ old_long_data %>%
              linetype = "dashed", size = 0.6) + 
   ggtitle("(Baseline) Density Distribution - Responses to listen to podcasts")
 
+
+### computer preference
 
 new_long_data %>%
   filter(question == "computer_preference_1")%>%
