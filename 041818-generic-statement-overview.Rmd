@@ -195,6 +195,60 @@ response_data_control_for_time_implicit <- response_data_implicit %>%
   filter(time_spent > 45)
 ```
 
+
+```{r plot for CogSci}
+old_long_data <- response_data_baseline %>%
+  mutate(condition = "baseline")
+
+new_long_data <- response_data_generic %>%
+  mutate(condition = "novel")
+  
+all_long_data <- bind_rows(new_long_data, old_long_data) %>%
+  select(-truefalse_response, -time_spent)
+
+all_long_data %>%
+  group_by(condition, type) %>%
+  summarise(sd = sd(percent_response),
+            mean = mean(percent_response),
+            std_err=sd(percent_response)/sqrt(length(percent_response))) %>%
+  ggplot(aes(x = type, y = mean, fill = condition)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-std_err, ymax=mean+std_err), width=.2,
+                 position=position_dodge(.9), alpha= 0.6) +
+  scale_fill_brewer(palette="Paired") + 
+  xlab("Estimation Level") +
+  ylab("Mean Response (%)") +
+  labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
+  theme_classic()
+  
+all_long_data %>%
+  group_by(condition, type) %>%
+  tidyboot_mean(percent_response) %>% 
+  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), width=.2,
+                 position=position_dodge(.9), alpha= 0.6) +
+  scale_fill_brewer(palette="Paired") + 
+  xlab("Estimation Level") +
+  ylab("Mean Response (%)") +
+  labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
+  theme_classic()
+  
+    
+
+
+all_long_data %>%
+  ggplot(aes(x = type, y = percent_response, fill = version)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=percent_response-sd, ymax=percent_response+sd), width=.2,
+                 position=position_dodge(.9))
+
+```
+
+
+
+
+
 ```{r}
 # plot - pirate
 ### baseline ###
@@ -250,3 +304,9 @@ p2_implicit <- ggplot(response_data_control_for_time_implicit, aes(x = type, y =
 # grid.arrange(p2_baseline, p2_implicit, p2_generic, ncol = 3)
 ```
 
+```{r}
+all_long_data %>%
+  mutate(id = paste0(condition, "_", id)) %>%
+  lmer(percent_response/100 ~ type * condition + (1|id) + (1|feature), data = .) %>%
+  summary()
+```
