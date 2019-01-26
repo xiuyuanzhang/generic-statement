@@ -1,0 +1,396 @@
+---
+title: Data Collection and Analysis Pre-registration for Novel Generics on People’s
+  Habits
+author: "Xiuyuan Zhang and Dan Yurovsky"
+date: "01/10/2019"
+output: html_document
+---
+
+This script contains codes that we plan to use for our next collection of data on participants' prevalence estimation of people's habits when they hear these habits in a generic statements about people from novel countries. 
+
+We plan to collect data from 400 participants.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load libraries
+```{r load_libraries, message = F, warning = F}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+library(knitr)
+library(tidyboot)
+library(Matrix)
+library(effsize)
+library(pwr)
+library(compute.es)
+library(janitor)
+library(tidyboot)
+library(ggrepel)
+library(ggridges)
+library(hrbrthemes)
+library(viridis)
+theme_set(theme_classic(base_size = 14))
+```
+### Read in anonymized data
+We read in anonymized data (see `010919_preregistration_process_raw_data.R` for criterion applied to drop certain columns for privacy reasons)
+```{r, message = F, warning = F}
+data_new <- read_csv("data/01102019_people_novel_habit_anonymized_data.csv") 
+data_old <- read_csv("../baseline-people-habits/data/10312018_people_habit_anonymized_data.csv")
+```
+The total number of participants we get from this new collection of data is `r nrow(data_new)`. 
+
+### Applying filtering Criterion
+#### Pass attention check
+We set an attention check question at the end of our survey, asking participants to select four questions out of all questions they've seen previously in our survey. If participants fail the attention check(don't select all four correct questions), we will drop them from our sample.
+
+#### Gender & Age filtering
+Below, we first show that, in a previous collection of data, the distribuition of participants after 60 years old becomes sparse. The 94 percentile in our previous data samples has been 60 years old. We will then apply a cut-off of 60 years old for this new data and only include data for participants with age younger than 60 years old.  
+
+Based on previous data, we do not have many turkers select "Other/Non-comforming" for our question on gender information(3 out of 773). For this upcoming study, we will filter out Other/Non-conforming from our sample.
+
+```{r process old data, message = F, warning = F}
+# filter by condition: passing attention check
+old_attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
+
+old_qualtrics_filtered <- data_old %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% old_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% old_attnCheckAnswers))%>%
+  filter(attnFalse==0)
+
+# showing the basic count for demographic information
+old_qualtrics_filtered %>%
+  group_by(gender) %>%
+  summarise(n = n())%>%
+  kable()
+
+old_qualtrics_filtered %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(binwidth = 5, fill = "white", color = "black")  
+
+old_tidy_data <- old_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
+
+old_tidy_data %>%
+  group_by(gender) %>%
+  summarise(n = n()) %>%
+  kable()
+
+old_tidy_data %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(binwidth = 5, fill = "white", color = "black")
+
+old_filtered_data <- old_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+```
+
+
+```{r filter new data, message = F, warning = F}
+new_attnCheckAnswers <- c('like big cities','cook at home', 'go to the gym', 'consume dairy products')
+
+new_qualtrics_filtered <- data_new %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% new_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% new_attnCheckAnswers))%>%
+  filter(attnTrue ==4 & attnFalse==0)
+
+```
+Filter peole who passed the attention check, result: n = `r nrow(new_qualtrics_filtered)` (out of `r nrow(data_new)` )
+
+```{r rename, message = F, warning = F}
+new_tidy_data <- new_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) 
+
+new_tidy_data %>%
+  group_by(gender) %>%
+  summarise(n = n()) %>%
+  kable()
+
+new_tidy_data %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(binwidth = 2, fill = "white", color = "black")
+
+new_filtered_data <- new_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+
+new_filtered_data %>%
+  group_by(gender, age_bin, politics_bin) %>%
+  summarise(n = n(), age = mean(age), politics = mean(politics_1)) %>%
+  kable()
+```
+By filtering to participants who selected "Other/Non-conforming" for gender, we lost `r nrow(new_qualtrics_filtered) - nrow(new_tidy_data)` people.
+
+By filtering to participants younger than 60 years old, we lost `r nrow(new_tidy_data) - nrow(new_filtered_data)` people
+
+
+### Exploratory Data Analysis
+#### organize data in long format
+```{r message = F, warning = F}
+old_long_data <- old_filtered_data %>%
+  select(big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1, gender, age_bin, politics_bin, id) %>%
+  gather(question, response, big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1)
+
+new_long_data <- new_filtered_data %>%
+  select(big_cities_1:go_to_gym_1, 
+         gender, age_bin, politics_bin, id)%>%
+  gather(question, response, big_cities_1:go_to_gym_1)
+```
+
+#### analyze the correlation between previous data and incoming data
+```{r message = F, warning = F}
+new_data <- new_long_data %>% 
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+old_data <- old_long_data %>%
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+all_data <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+t.test(all_data$cor)
+```
+
+```{r plotting}
+new_long_data %>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  facet_wrap(~age_bin + gender + politics_bin) + 
+  ggtitle("(Novel) Density Distribution by Group - Responses to all questions")
+
+# separate groups
+old_long_data %>%
+  #filter(question == "podcast_1")%>%
+  ggplot(aes(x = response)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept = mean(response)), 
+             linetype = "dashed", size = 0.6) + 
+  facet_wrap(~age_bin + gender + politics_bin) + 
+  ggtitle("(Baseline) Density Distribution - Responses to all questions")
+
+mean_long_data <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  select(gender, age_bin, question, politics_bin, new, old) %>%
+  gather(version, scaled_mean, new, old)
+
+mean_long_data2 <- mean_long_data %>%
+  unite(demographic, gender, age_bin, politics_bin, sep = ",", remove = FALSE)
+
+mean_long_data %>%
+  ggplot(aes(x = question, y = scaled_mean, colour = version)) + 
+  geom_count(position = position_dodge(width = 0.5), size = 1.5) +
+  facet_wrap(~gender + age_bin + politics_bin)
+
+mean_long_data %>%
+  ggplot(aes(x = question, y = scaled_mean, colour = version)) + 
+  geom_count(position = position_dodge(width = 0.5), size = 1.5) +
+  facet_wrap(~gender + age_bin + politics_bin)
+
+mean_long_data2 %>%
+  ggplot(aes(x = question, y = scaled_mean, colour = version)) + 
+  geom_jitter(position = position_dodge(width = -0.3),size = 1.5) +
+  facet_wrap(~demographic)
+
+## try plotting correlation
+# SCALED
+all_data_mean <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean)
+
+all_data_mean %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ", \n")) %>%
+  ggplot(aes(x = old, y = new, colour = question, label = demographics)) +
+  geom_jitter(size = 2.5) +
+  geom_text_repel(size = 3, force = 10, point.padding = 0.1, box.padding = 0.3, show.legend = F, segment.alpha = 0.4) +
+  coord_fixed(ratio=1, xlim = c(-1, 1.3), ylim = c(-1, 1.3)) +
+  geom_abline(intercept = 0, slope = 1) + 
+  scale_colour_discrete(name="Questions",
+                         breaks=c("big_cities_1", "computer_preference_1","cook_at_home_1",
+                                  "dairy_products_1", "go_to_gym_1", "own_homes_1"),
+                         labels=c("like big cities", "prefers Macs over PCs", 
+                                  "like to cook at home", "consume dairy products",
+                                  "go to the gym", "own homes")) +
+  ylab("mean response from novel generics") + 
+  xlab("mean response from baseline") +
+  labs(title= "(Scaled) Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
+  theme_classic()
+
+# UNSCALED
+unscaled_new_data <- new_long_data %>% 
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+unscaled_old_data <- old_long_data %>%
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+unscaled_all_data <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+t.test(unscaled_all_data$cor)
+
+
+unscaled_all_data_mean <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean)
+
+unscaled_all_data_mean %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ", \n")) %>%
+  ggplot(aes(x = old, y = new, colour = question, label = demographics)) +
+  geom_jitter(size = 2.5) +
+  geom_text_repel(size = 3, force = 10, point.padding = 0.1, box.padding = 0.3, show.legend = F, segment.alpha = 0.4) +
+  coord_fixed(ratio=1, xlim = c(20, 100), ylim = c(20, 100)) +
+  geom_abline(intercept = 0, slope = 1) + 
+  scale_colour_discrete(name="Questions",
+                         breaks=c("big_cities_1", "computer_preference_1","cook_at_home_1",
+                                  "dairy_products_1", "go_to_gym_1", "own_homes_1"),
+                         labels=c("like big cities", "prefers Macs over PCs", 
+                                  "like to cook at home", "consume dairy products",
+                                  "go to the gym", "own homes")) +
+  ylab("mean response from novel generics") + 
+  xlab("mean response from baseline") +
+  labs(title= "Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
+  theme_classic()
+
+  
+```
+
+```{r plot ridges}
+# all questions in aggregate, and all groups
+new_long_data%>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot( aes(y=demographics, x=response,  fill=demographics)) +
+    geom_density_ridges(alpha=0.6, bandwidth=4) +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)
+    ) +
+    xlab("Responses (%)") +
+    ylab("Demographic Group")
+
+new_long_data%>%
+  filter(question %in% c("go_to_gym_1", "own_homes_1")) %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot(aes(y=demographics, x=response, fill=demographics)) +
+  #stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE) +
+  #scale_fill_viridis(name = "Tail probability", direction = -1)
+    geom_density_ridges(alpha=0.6, bandwidth=6, scale=1.5) +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      panel.spacing = unit(0.3, "lines"),
+      strip.text.y = element_text(size = 6)
+    ) +
+    xlab("Responses (%)") +
+    ylab("Density") +
+  facet_wrap(~question, labeller=labeller(question = question_labels)) +
+  labs(title= "Participants' Response to Novel Generic Questions by Demographic Subgroup") +
+  theme(axis.title.x =element_text(size=16, hjust = 0.5), axis.title.y =element_text(size=16, hjust = 0.5), title = element_text(hjust = 0))
+
+old_long_data%>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot( aes(y=demographics, x=response,  fill=demographics)) +
+    geom_density_ridges(alpha=0.6, bandwidth=4) +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)
+    ) +
+    xlab("Responses (%)") +
+    ylab("Demographic Group") +
+  facet_wrap(~question)
+
+# put old and new long data together
+new_long <- new_long_data %>%
+  mutate(version ="novel generic")
+old_long <- old_long_data %>%
+  mutate(version = "baseline")
+all_long_data <- bind_rows(new_long, old_long) %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ","))
+
+question_labels <- c(big_cities_1 = "like big cities",
+                     computer_preference_1 = "prefers Macs over PCs",
+                     cook_at_home_1 = "like to cook at home",
+                     dairy_products_1 = "consume dairy products",
+                     go_to_gym_1 = "go to the gym",
+                     own_homes_1 = "own homes")
+ 
+all_long_data %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot(aes(y=demographics, x=response,  fill=version, colour = demographics)) +
+    geom_density_ridges(alpha=0.6, bandwidth=4) +
+    scale_fill_viridis(discrete=TRUE, name = "Version", option = "C") +
+    scale_color_viridis(discrete=TRUE, guide = "none") +
+    theme_ipsum() +
+    theme(
+      #legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)
+    ) +
+    xlab("Responses (%)") +
+    ylab("Demographic Group") +
+  facet_wrap(~question, labeller=labeller(question = question_labels)) + 
+  labs(title= "Participants' Response to Questions by Demographic Subgroup", subtitle = "Comparison between baseline estimation and novel generic estimation")
+  
+  
+```
+
+
+
+
+
+```{r}
+mean_long_data2 %>%
+  group_by(demographic, question, version) %>%
+  summarise(mean = scaled_mean) %>%
+  mutate(diff = first(mean) - last(mean)) %>%
+  summarise(diff = mean(diff)) %>%
+  summarise(diff= mean(diff)) %>%
+  summarise(diff = mean(diff))
+
+```
