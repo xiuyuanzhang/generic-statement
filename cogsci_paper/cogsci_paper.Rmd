@@ -1,26 +1,18 @@
 ---
-title: "How to Make a Proceedings Paper Submission"
+title: "Meanings of Generic Language are Sensitive to Listeners' Backgroud Knowledge"
 bibliography: generic-statement.bib
 csl: apa6.csl
 document-params: "10pt, letterpaper"
 
 author-information: > 
-    \author{{\large \bf Morton Ann Gernsbacher (MAG@Macc.Wisc.Edu)} \\ Department of Psychology, 1202 W. Johnson Street \\ Madison, WI 53706 USA
-    \AND {\large \bf Sharon J.~Derry (SDJ@Macc.Wisc.Edu)} \\ Department of Educational Psychology, 1025 W. Johnson Street \\ Madison, WI 53706 USA}
+    \author{{\large \bf Xiuyuan Zhang (xiuyuanzhang@uchicago.edu)} \\ Department of Psychology, 5848 S University Ave \\ Chicago, IL 60637 USA
+    \AND {\large \bf Daniel Yurovsky (yurovsky@uchicago.edu)} \\ Department of Psychology, 5848 S University Ave \\ Chicago, IL 60637 USA}
 
 abstract: >
-    Include no author information in the initial submission, to facilitate
-    blind review.  The abstract should be one paragraph, indented 1/8 inch on both sides,
-    in 9~point font with single spacing. The heading 'Abstract'
-    should be 10~point, bold, centered, with one line of space below
-    it. This one-paragraph abstract section is required only for standard
-    six page proceedings papers. Following the abstract should be a blank
-    line, followed by the header 'Keywords' and a list of
-    descriptive keywords separated by semicolons, all in 9~point font, as
-    shown below.
+    Children reguarly hear and produce generic languages during their daily interactions with their parents. Generics such as "birds lay eggs" or "dogs bark" provide kind-based information about a category (e.g., birds) and its characteristic features (e.g., lay eggs, bark.) This function allows speakers to successfully communicate generalizable knowledge about the distribution of certain features within a given category without the constrain of referring to objects only in the here-and-now. However, the meaning of generics can be ambiguious and highly context-dependent. Without any quantificational information, the interpretation of a generic depends largely on a listener's own world knowledge. In a series of 2 experiments on Amazon Mechanical Turk, we investigated how differences in listeners’ comparison sets may lead them to make systematically biased inferences of prevalence for a given feature in novel categories. In Experiment 1, we manipulated the set of categories salient to a listener by directly providing them the comparison sets. In Experiment 2, we collected participants’ demographic information and used these naturally occurring differences as a basis for differences in the participants' comparison sets. Results from both studies confirmed our hypothesis that the prevalence of a feature in different comparison categories changes people' estimatite of the feature prevalence in novel categories.
     
 keywords: >
-    Add your choice of indexing terms or keywords; kindly use a semi-colon; between each term.
+    generics; semantics; meaning; learning; Bayesian inference
     
 output: cogsci2016::cogsci_paper
 #final-submission: \cogscifinalcopy
@@ -35,160 +27,339 @@ knitr::opts_chunk$set(fig.width=3, fig.height=3, fig.crop = F,
 
 ```{r, libraries}
 library(png)
+library(jpeg)
 library(grid)
 library(ggplot2)
 library(xtable)
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(DT)
+library(ggpirate)
+library(gridExtra)
+library(knitr)
+library(tidyboot)
+library(Matrix)
+library(effsize)
+library(pwr)
+library(compute.es)
+library(janitor)
+library(tidyboot)
+library(ggrepel)
+library(ggridges)
+library(hrbrthemes)
+library(viridis)
+theme_set(theme_classic())
 ```
 
-# General Formatting Instructions 
+# Introduction
 
-We used work from @gelman2008. Generics are really important [@gelman2008]. We cribbed an idea from @tessler2019.
+Generic languages, such as “birds lay eggs,” are commonly used in parent-child conversations (Gelman & Tardif, 1998.) Different from sentences such as “that bird lays eggs” and “some birds lay eggs,” previous research has shown that generics were more likely to elicit people’s responses about kinds rather than specific instances of a kind (cite Gelman; Rhodes; Cimpian; Tessler). Conveying general information about a given category and its property, generics are part of our vernacular since a young age. Parents from English-speaking and Mandarin-speaking families regularly produce generics when talking with their children (Gelman & Tardif, 1998). Adults also utilize generics in their daily speech and writing (Master, 1987). However, despite its appearance in both speech and text, which may suggest it providing a privileged path to information transmission (easily understandable, highly accurate, etc.), the meaning of generic language is ambiguous. 
 
+The composition of a generic, in comparison to other forms of statements, contributes to its vagueness in meaning. For instance, consider the bare plural noun phrase “birds” in “birds lay eggs”, it makes a claim about the bird category that underspecifies the prevalence rate of the feature \textit{lay eggs} in birds. “Birds lay eggs” is neither a statement about all members of that category laying eggs, nor half of the members, nor any specific proportion. If one were to evaluate the meaning (or truth value) of a generic and think carefully the criterion for which “birds lay eggs” would be true, one would realize that, for birds to lay eggs, they have to be adult, female, and healthy. These criterion immediately restrict the proportion of birds that lay eggs to be about 50% if not less. Thus, a reasonable interpretation of this generic relies heavily on a listener’s prior knowledge of the category “birds” and of the activity “lay eggs”. Upon hearing “lay eggs”, a listener may infer that female birds are the subject under discussion even though “female” is not explicitly mentioned so as to not mistakenly infer that all members of the category birds lay eggs. In contrast, quantifiers such as “some”, “most”, and “all” limits the interpretation of a sentence to a certain range of responses by providing a filtering criteria for prevalence distribution in members of a category. In the absence of quantifiers, the meaning of generics become more context-dependent and sensitive to listeners’ prior knowledge. People can generate quite different readings of the same generic, depending on their understanding of the underlying distribution of the category and property in a given generic.
 
+\noindent \textbf{unfinished} Recent work has proposed to formalize the meaning of generic expressions as conditional probability (Tenenbaum, Kemp, Griffiths & Goodman, 2011; Frank & Goodman, 2012; Tessler & Goodman, 2017). Instead of specifying a fixed prevalence threshold for each category-feature pair, an interpretation for a generic can be seen as derived from listeners utilizing their probabilistic world knowledge upon hearing the statement. 
 
-For general information about authoring in markdown, see **[here](http://rmarkdown.rstudio.com/authoring_basics.html).**
+# Experiment 1
+## Method
+Two conditions were tested in this experiment - (1a) a baseline survey, where we asked participants to estimate prevalence rate for familiar category-feature pairs, and (1b) a novel category survey, where participants were introduced to a novel category along with a familiar comparison category, then they were shown a generic containing a novel category and a familiar feature and asked to estimate the prevalence rate of the feature within the novel category. 
 
-The entire content of a paper (including figures, references, and anything else) can be no longer than six pages in the \textbf{initial submission}. In the \textbf{final submission}, the text of the paper, including an author line, must fit on six pages. Up to one additional page can be used for acknowledgements and references.
+\noindent \textbf{Participants} For condition 1a. baseline survey, we recruited 150 participants from Amazon Mechanical Turk. 145 participants passed the attention check question and their responses were included in the following analysis. For condition 1b. novel category survey, 150 participants were recruited from Amazon Mechanical Turk. 114 participants passed the attention check question and their responses were included in the analysis. Participants recruited were U.S. citizens over 18 years old and received monetary compensation for their work. We inserted a Unique Turker Id scirpt in our survey designs to ensure that each worker on Turk is allowed to take only one survey. 
 
-The text of the paper should be formatted in two columns with an
-overall width of 7 inches (17.8 cm) and length of 9.25 inches (23.5
-cm), with 0.25 inches between the columns. Leave two line spaces
-between the last author listed and the text of the paper; the text of
-the paper (starting with the abstract) should begin no less than 2.75 inches below the top of the
-page. The left margin should be 0.75 inches and the top margin should
-be 1 inch.  \textbf{The right and bottom margins will depend on
-whether you use U.S. letter or A4 paper, so you must be sure to
-measure the width of the printed text.} Use 10~point Times Roman
-with 12~point vertical spacing, unless otherwise specified.
+\noindent \textbf{Condition 1a. Baseline Survey} In condition 1a., three features (friendly, tasty, and heavy) were chosen, and, for each feature, we chose three categories that were relevant to the feature that will elicit different levels(low, medium, high) of prevalence estimation. These categories were later provided to the participants in condition (1b) as comparison sets for their inferences of the novel category. Every participant answered questions about each of three features and, for each feature, one randonly-selected category. The order in which the features appeared in the survey was randomized, and each participant was tested on only one category from each of the predetermined prevalence levels. In the survey, participants were first shown a generic for each of the category and feature pair. Then they were asked to first evaluate the truth condition of the generic by answering a forced-choice True or False question, and to estimate the proportion of the feature within the given category. Participants recorded their responses to the estimation question on a scale slider, ranging from 0% to 100%.
 
-The title should be in 14~point bold font, centered. The title should
-be formatted with initial caps (the first letter of content words
-capitalized and the rest lower case). In the initial submission, the
-phrase ``Anonymous CogSci submission'' should appear below the title,
-centered, in 11~point bold font.  In the final submission, each
-author's name should appear on a separate line, 11~point bold, and
-centered, with the author's email address in parentheses. Under each
-author's name list the author's affiliation and postal address in
-ordinary 10~point type.
+\noindent \textbf{Condition 1b. Novel Category Survey} In condition 1b., the same three features (friendly, tasty, and heavy) were used. Different from condition (1a), for each feature, we introduced participants to a novel category using made-up words. Parctipants were also provided with categories from condition 1a. as a reference set in the form of "Feps(the made-up word) are like puppies(a baseline category)". The paired baseline category was randomly selected from the three possible categories for each feature. Same as 1a., every participant answered questions about all three features, and one randomly selected comparison category for each feature. The order in which the features came in the survey was again randomized, and each participant was tested on only one category from each predetermined response range (1 low, 1 medium, and 1 high). In the survey, participants were first told that they are visiting three new countries, and people from there will introduce them to things in their respective countries. Each novel category was embedded in a generic (e.g., "Feps are friendly") when first introduced, followed by an explicit of comparison set (e.g., "Feps are like puppies"). After which, participants were asked to estimate the proportion of the feature within the novel category. Participants recorded their responses to the estimation question on a scale slider, ranging from 0% to 100%.
 
-Indent the first line of each paragraph by 1/8~inch (except for the
-first paragraph of a new section). Do not add extra vertical space
-between paragraphs.
+\noindent \textbf{Attention check question} For both conditions, we designed an attention check question in the end of the survey. For 1a., we asked participants to choose the three features we asked about in the survey. For 1b., we asked participants to select the three novel categories that were mentioned in the survey.
 
+```{r Exp1, fig.env="figure", fig.pos = "H", fig.align = "center", fig.width=3, fig.height=2.5, fig.cap = "Baseline vs. Novel Condition Prevalence Estimation"}
+#### read in data
+### baseline ###
+data_baseline <- read_csv("../baseline-survey110218/data/020818baseline-anonymized-data.csv")
+### explicit generic ###
+data_generic <- read_csv("../generic-survey110218/data/020818generic-anonymized-data.csv")
 
-# First-Level Headings
+#### filter participants who passed attention check 
+### baseline ###
+qualtrics_filtered_baseline <- data_baseline %>%
+  filter(Q8 == "friendly,tasty,heavy")
+### explicit generic ###
+qualtrics_filtered_generic <- data_generic %>%
+  filter(Q10 == "kobas,feps,dands")
 
-First level headings should be in 12 point , initial caps, bold and
-centered. Leave one line space above the heading and 1/4~line space
-below the heading.
+#### Munge data
+### In both surveys, the categories and features we chose are consistent.
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("squirrels", "bikes", "vegetables")
+features <- c("friendly", "heavy", "tasty")
 
-## Second-Level Headings
+# features and objects for the survey
+objects <- data_frame(type = "high", object = high_objects,
+                      feature = features) %>%
+  bind_rows(data_frame(type = "medium", object = med_objects,
+                       feature = features)) %>%
+  bind_rows(data_frame(type = "low", object = low_objects,
+                       feature = features))
 
-Second level headings should be 11 point , initial caps, bold, and
-flush left. Leave one line space above the heading and 1/4~ line
-space below the heading.
+# get data for each of the three conditions
+### baseline ###
+q1_baseline <- qualtrics_filtered_baseline %>%
+  select(id, L_feature, L_object, Q1, Q2_1) %>%
+  rename(feature = L_feature, baseline_object = L_object, truefalse_response = Q1, percent_response = Q2_1)
 
-### Third-Level Headings
+q2_baseline <- qualtrics_filtered_baseline %>%
+  select(id, M_feature, M_object, Q3, Q4_1) %>%
+  rename(feature = M_feature, baseline_object = M_object, truefalse_response = Q3, percent_response = Q4_1)
 
-Third-level headings should be 10 point , initial caps, bold, and flush
-left. Leave one line space above the heading, but no space after the
-heading.
+q3_baseline <- qualtrics_filtered_baseline %>%
+  select(id, H_feature, H_object, Q5, Q6_1) %>%
+  rename(feature = H_feature, baseline_object = H_object, truefalse_response = Q5, percent_response = Q6_1)
 
-# Formalities, Footnotes, and Floats
+### explicit generic ###
+colnames(qualtrics_filtered_generic)[colnames(qualtrics_filtered_generic) == "Duration (in seconds)"] <- "time_spent"
 
-Use standard APA citation format. Citations within the text should
-include the author's last name and year. If the authors' names are
-included in the sentence, place only the year in parentheses, as in
-[-@NewellSimon1972a], but otherwise place the entire reference in
-parentheses with the authors and year separated by a comma
-[@NewellSimon1972a]. List multiple references alphabetically and
-separate them by semicolons [@ChalnickBillman1988a; @NewellSimon1972a]. 
-Use the et. al. construction only after listing all the authors to a
-publication in an earlier reference and for citations with four or
-more authors.
+# get data for each of the three conditions
+q1_generic <- qualtrics_filtered_generic %>%
+  select(id, L_feature, L_comparison, L_novel, Q2_1, time_spent) %>%
+  rename(feature = L_feature, baseline_object = L_comparison, novel_object = L_novel, percent_response = Q2_1)
 
-For more information on citations in RMarkdown, see **[here](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html#citations).**
+q2_generic <- qualtrics_filtered_generic %>%
+  select(id, M_feature, M_comparison, M_novel, Q5_1, time_spent) %>%
+  rename(feature = M_feature, baseline_object = M_comparison, novel_object = M_novel,percent_response = Q5_1)
 
-## Footnotes
+q3_generic <- qualtrics_filtered_generic %>%
+  select(id, H_feature, H_comparison, H_novel, Q6_1, time_spent) %>%
+  rename(feature = H_feature, baseline_object = H_comparison, novel_object = H_novel, percent_response = Q6_1)
 
-Indicate footnotes with a number\footnote{Sample of the first
-footnote.} in the text. Place the footnotes in 9 point type at the
-bottom of the page on which they appear. Precede the footnote with a
-horizontal rule.\footnote{Sample of the second footnote.} You can also use 
-markdown formatting to include footnotes using this syntax [^1].
+# combine
+### baseline ###
+response_data_baseline <- bind_rows(q1_baseline, q2_baseline, q3_baseline) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+### explicit generic ###
+response_data_generic <- bind_rows(q1_generic, q2_generic, q3_generic) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
 
-[^1]: Sample of a markdown footnote.
+#### Plot for CogSci
+exp1_old_long_data <- response_data_baseline %>%
+  mutate(condition = "baseline")
 
-## Figures
+exp1_new_long_data <- response_data_generic %>%
+  mutate(condition = "novel")
+  
+exp1_all_long_data <- bind_rows(exp1_new_long_data, exp1_old_long_data) %>%
+  select(-truefalse_response, -time_spent)
 
-All artwork must be very dark for purposes of reproduction and should
-not be hand drawn. Number figures sequentially, placing the figure
-number and caption, in 10 point, after the figure with one line space
-above the caption and one line space below it. If necessary, leave extra white space at
-the bottom of the page to avoid splitting the figure and figure
-caption. You may float figures to the top or bottom of a column, or
-set wide figures across both columns.
+exp1_all_long_data %>%
+  group_by(condition, type) %>%
+  tidyboot_mean(percent_response) %>% 
+  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), width=.2,
+                 position=position_dodge(.9), alpha= 0.6) +
+  scale_fill_brewer(palette="Paired") + 
+  xlab("Prevalence Level") +
+  ylab("Mean Response (%)") +
+  #labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
+  theme(axis.title.x =element_text(size=8, hjust = 0.5),
+        axis.title.y =element_text(size=8, hjust = 0.5),
+        legend.text = element_text(size=6),
+        legend.title = element_text(size = 8))
 
-## Two-column images
-
-You can read local images using png package for example and plot 
-it like a regular plot using grid.raster from the grid package. 
-With this method you have full control of the size of your image. **Note: Image must be in .png file format for the readPNG function to work.**
-
-You might want to display a wide figure across both columns. To do this, you change the `fig.env` chunk option to `figure*`. To align the image in the center of the page, set `fig.align` option to `center`. To format the width of your caption text, you set the `num.cols.cap` option to `2`.
-
-```{r 2-col-image, fig.env = "figure*", fig.pos = "h", fig.width=4, fig.height=2, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "This image spans both columns. And the caption text is limited to 0.8 of the width of the document."}
-img <- png::readPNG("figs/walrus.png")
-grid::grid.raster(img)
+exp1_empirical_stats <- exp1_all_long_data %>%
+  group_by(condition, type) %>%
+  tidyboot_mean(percent_response)
 ```
 
-## One-column images
+## Results
+Participant responses in both conditions increased by prevalence level (Fig. 1). In the baseline condition, participants' responses by prevalence levels were consistent with our prior grouping of the categories across features. For the low, medium, high prevalence level, the respective mean response are: \textit{M} = 47.7 (\textit{CI} = 43.1-52.4), \textit{M} = 60.0 (\textit{CI} = 55.9-64.1), and \textit{M} = 88.7 (\textit{CI} = 86.1-91). In the novel category condition, the respective mean response are: \textit{M} = 73.8 (\textit{CI} = 69.8-77.5), \textit{M} = 77.1 (\textit{CI} = 73.4-80.6), and \textit{M} = 86.1 (\textit{CI} = 83.4-88.7). Both the baseline and novel conditions exhibited a trend of increase in prevalence estimation by prevalence levels. Furthermore, consistent with our model's prediction, the mean responses of novel conditions in both low and medium prevalence levels were higher than the baseline condition. However, the novel condition's mean response for the high prevalence level is lower than the baseline condition's by 2.6, and their confidence intervals overlapped. 
 
-Single column is the default option, but if you want set it explicitly, set `fig.env` to `figure`. Notice that the `num.cols` option for the caption width is set to `1`.
 
-```{r image, fig.env = "figure", fig.pos = "H", fig.align='center', fig.width=2, fig.height=2, set.cap.width=T, num.cols.cap=1, fig.cap = "One column image."}
-img <- png::readPNG("figs/lab_logo_stanford.png")
-grid::grid.raster(img)
+```{r}
+exp1_lmer <- exp1_all_long_data %>%
+  mutate(id = paste0(condition, "_", id)) %>%
+  lmer(percent_response/100 ~ type * condition + (1|id) + (1|feature), data = .) %>%
+  summary()
+```
+
+# Experiment 2
+## Method
+Experiment 2 is composed of two experiments, where experiment 2a includes a baseline survey of 15 questions about people's habits, and a simulation to select a smaller set of 6 questions to in experiment 2b. Participants were asked to make estimations on the prevalence rate of each habit among people. Experiment 2b used the results from the previous simulation to finalize the 6 questions to be asked. In experiment 2b, participants were introducted to six novel countries and people in those countries, and were asked to make prevalence estimations for each habit among people in the foreign countries. In both experiments, we collected data on participants demographic information, including their gender, age, political ideology score, and zip code. We later used the demographic information to analyze the naturally occuring differences in particpants' comparison sets when making prevalence estimations.
+
+\noindent \textbf{Participants} For Experiment 2a. baseline survey, we recruited 968 adult participants from Amazon Mechanical Turk. 726 participants (Mage = 37 years, SD = 11.92) passed the final attention check and their responses were included in the following analysis. For Experiment 2b novel category survey, 400 adult participants were recruited from Amazon Mechanical Turk. 317 participants (Mage = 35 years, SD = 11.47) passed the final attention check and their responses were included in the analysis. Participants from both conditions were asked a series of demographic questions, including gender, age, political ideology score, and zip code. Participants recruited were U.S. citizens over 18 years old and received monetary compensation for their work. 
+
+\noindent \textbf{Exp 2a. Baseline Survey} Participants in this condition were shown a series of 15 questions. Each question asked them to make an estimate the percentage of people having a certain habit (see Table. 3). Participants responded by choosing a number from 0 - 100% using a slider bar. The order in which the questions appeared was randomized. Six questions were chosen from the previous fifteen questions in Experiment 2a to be asked in Experiment 2b. The selection was based on running simulation (n = 100) on baseline survey responses from participants to all 15 questions and we selected a combination of 6 questions that has large t values. 
+
+```{r Exp2-map, fig.pos = "H", fig.align='center', fig.width=3, fig.heighti=3, set.cap.width=T, fig.cap = "Novel category survey map prompt"}
+
+img_map <- jpeg::readJPEG("figs/novel_country_map3.jpeg")
+grid::grid.raster(img_map)
+
+```
+
+\noindent \textbf{Exp 2b. Novel Category Survey} Participants in this condition were first shown a map of 6 imaginary countries and their corresponding novel names (see Fig. 2) along with a prompt. They were told that people from these six countries will introduce some habits of people from their countries to them. They were then introduced to generic statements about each of the country and a habit selected from the simulation. After reading the generic statement, participants were then asked to make an estimate the percentage of people having a certain habit (see Table. 3). Participants responded by choosing a number from 0 - 100% using a slider bar. The order in which the questions appeared was randomized. The code for analyze this experiment is preregistered.
+
+## Results
+We calculated the pearson correlation of average mean responsess across demographic groups between experiment 2a. baseline and 2b. novel for all 6 questions selected via simulation. The average mean responses between the two experiments are positively correlated for each question, with p-value of the t-test equals to 0.002. The highest correlation among the six questions was 0.688 for the feature "like to cook at home", and the lowest correlation was 0.216 for "go to the gym". We further examinzed the within-demographic group differences in mean responses between the baseline and novel experiments by questions (see Fig.2). We divided the demographic groups into 8 subgroups (2 age, 2 gender, 2 political leaning). The bins for dividing age and political ideology scores in experiment (2a) were based on the mean age and mean political ideology scores in experiment (2b). Each dot in the sub-plot in Fig.2 is a unique demographic group. Across all six questions, the mean responses from each of the 8 demographic groups for the novel conditions (shown in y-axis) were consistently higher than the mean responses for the baseline condition. The results from experiment 2 showed that participants from different demographic groups make different prevalence estimations within each question, and their responses were on average higher for novel conditions than for baseline conditions. Participants across demographic groups also respond to different questions differently. 
+
+
+
+```{r Exp2-mean, fig.env = "figure*", fig.pos = "h", fig.width=6, fig.height=6, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Novel vs. baseline category mean response"}
+
+data_new <- read_csv("../demographic_generic/novel_generic/data/01102019_people_novel_habit_anonymized_data.csv") 
+data_old <- read_csv("../demographic_generic/baseline-people-habits/data/10312018_people_habit_anonymized_data.csv")
+
+# filter by condition: passing attention check
+old_attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
+
+old_qualtrics_filtered <- data_old %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% old_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% old_attnCheckAnswers))%>%
+  filter(attnFalse==0)
+
+old_tidy_data <- old_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
+
+old_filtered_data <- old_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+
+new_attnCheckAnswers <- c('like big cities','cook at home', 'go to the gym', 'consume dairy products')
+
+new_qualtrics_filtered <- data_new %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% new_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% new_attnCheckAnswers))%>%
+  filter(attnTrue ==4 & attnFalse==0)
+
+new_tidy_data <- new_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) 
+
+new_filtered_data <- new_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+
+old_long_data <- old_filtered_data %>%
+  select(big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1, gender, age_bin, politics_bin, id) %>%
+  gather(question, response, big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1)
+
+new_long_data <- new_filtered_data %>%
+  select(big_cities_1:go_to_gym_1, 
+         gender, age_bin, politics_bin, id)%>%
+  gather(question, response, big_cities_1:go_to_gym_1)
+
+#### cor
+new_data <- new_long_data %>% 
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+old_data <- old_long_data %>%
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+all_data <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+t_test_cor_result <- t.test(all_data$cor)
+
+# UNSCALED
+unscaled_new_data <- new_long_data %>% 
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+unscaled_old_data <- old_long_data %>%
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+unscaled_all_data <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+unscaled_all_data_mean <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean)
+
+question_labels <- c(big_cities_1 = "like big cities",
+                     computer_preference_1 = "prefers Macs over PCs",
+                     cook_at_home_1 = "like to cook at home",
+                     dairy_products_1 = "consume dairy products",
+                     go_to_gym_1 = "go to the gym",
+                     own_homes_1 = "own homes")
+
+unscaled_all_data_mean %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ", \n")) %>%
+  ggplot(aes(x = old, y = new, colour = question, label = demographics)) +
+  geom_jitter(size = 1) +
+  geom_text_repel(size = 2, force = 10, point.padding = 0.1, box.padding = 0.3, show.legend = F, segment.alpha = 0.4) +
+  coord_fixed(ratio=1, xlim = c(20, 100), ylim = c(20, 100)) +
+  geom_abline(intercept = 0, slope = 1, alpha = 0.4) + 
+  facet_wrap(~question, labeller = as_labeller(question_labels)) +
+  scale_colour_discrete(guide = F) +
+  ylab("mean response from novel generics") + 
+  xlab("mean response from baseline") +
+  labs(title= "Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
+  theme(axis.title.x =element_text(size=8, hjust = 0.5),
+        axis.title.y =element_text(size=8, hjust = 0.5),
+        strip.text.x = element_text(size = 6),
+        plot.title = element_text(size = 8),
+        plot.subtitle = element_text(size = 6))
 ```
 
 
-## R Plots
 
-You can use R chunks directly to plot graphs. And you can use latex floats in the
-fig.pos chunk option to have more control over the location of your plot on the page. For more information on latex placement specifiers see **[here](https://en.wikibooks.org/wiki/LaTeX/Floats,_Figures_and_Captions)**
+```{r Exp2-ridges, fig.env = "figure*", fig.pos = "h", fig.width=6, fig.height=3, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Novel Condition Prevalence Estimation by Demographic Groups"}
 
-```{r plot, fig.env="figure", fig.pos = "H", fig.align = "center", fig.width=2, fig.height=2, fig.cap = "R plot" }
-x <- 0:100
-y <- 2 * (x + rnorm(length(x), sd = 3) + 3)
-
-ggplot2::ggplot(data = data.frame(x, y), 
-                aes(x = x, y = y)) + 
-  geom_point() + 
-  geom_smooth(method = "lm")
+new_long_data%>%
+  filter(question %in% c("go_to_gym_1", "own_homes_1")) %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot(aes(y=demographics, x=response, fill=demographics)) +
+  #stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE) +
+  #scale_fill_viridis(name = "Tail probability", direction = -1)
+  geom_density_ridges(alpha=0.6, bandwidth=6, scale=1.5) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  xlab("Responses (%)") +
+  ylab("Density") +
+  facet_wrap(~question, labeller=labeller(question = question_labels)) +
+  labs(title= "Participants' Response to Novel Generic Questions by Demographic Subgroup") +
+  theme(axis.title.x =element_text(size=8, hjust = 0.5),
+        axis.title.y =element_text(size=8, hjust = 0.5),
+        strip.text.x = element_text(size = 6),
+        plot.title = element_text(size = 8),
+        legend.position="none",
+        panel.spacing = unit(0.3, "lines"),
+        strip.text.y = element_text(size = 6))
 ```
 
 
-## Tables
-
-Number tables consecutively; place the table number and title (in
-10 point) above the table with one line space above the caption and
-one line space below it, as in Table 1. You may float
-tables to the top or bottom of a column, set wide tables across both
-columns.
-
-You can use the xtable function in the xtable package.
-
-```{r xtable, results="asis"}
-n <- 100
-x <- rnorm(n)
-y <- 2*x + rnorm(n)
-out <- lm(y ~ x)
-
-tab1 <- xtable::xtable(summary(out)$coef, digits=c(0, 2, 2, 1, 2), 
-                       caption = "This table prints across one column.")
-
-print(tab1, type="latex", comment = F, table.placement = "H")
-```
 
 # Acknowledgements
 
