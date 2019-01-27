@@ -1,15 +1,16 @@
 ---
-title: "Meanings of Generic Language are Sensitive to Listeners' Backgroud Knowledge"
+title: "Interpretation of Generic Language is Depends on Listener's Backgroud Knowledge"
 bibliography: generic-statement.bib
 csl: apa6.csl
 document-params: "10pt, letterpaper"
 
 author-information: > 
-    \author{{\large \bf Xiuyuan Zhang (xiuyuanzhang@uchicago.edu)} \\ Department of Psychology, 5848 S University Ave \\ Chicago, IL 60637 USA
-    \AND {\large \bf Daniel Yurovsky (yurovsky@uchicago.edu)} \\ Department of Psychology, 5848 S University Ave \\ Chicago, IL 60637 USA}
+ \author{Xiuyuan Zhang \and Daniel Yurovsky \\
+         \texttt{\{xiuyuanzhang, yurovsky\}@uchicago.edu} \\
+        Department of Psychology \\ University of Chicago}
 
 abstract: >
-    Children reguarly hear and produce generic languages during their daily interactions with their parents. Generics such as "birds lay eggs" or "dogs bark" provide kind-based information about a category (e.g., birds) and its characteristic features (e.g., lay eggs, bark.) This function allows speakers to successfully communicate generalizable knowledge about the distribution of certain features within a given category without the constrain of referring to objects only in the here-and-now. However, the meaning of generics can be ambiguious and highly context-dependent. Without any quantificational information, the interpretation of a generic depends largely on a listener's own world knowledge. In a series of 2 experiments on Amazon Mechanical Turk, we investigated how differences in listeners’ comparison sets may lead them to make systematically biased inferences of prevalence for a given feature in novel categories. In Experiment 1, we manipulated the set of categories salient to a listener by directly providing them the comparison sets. In Experiment 2, we collected participants’ demographic information and used these naturally occurring differences as a basis for differences in the participants' comparison sets. Results from both studies confirmed our hypothesis that the prevalence of a feature in different comparison categories changes people' estimatite of the feature prevalence in novel categories.
+    Generic language, like "birds lay eggs" or "dogs bark" are simple and ubiquitou in naturally produced speech. However, the inherent vagueness of generics makes their interpretation highly context dependent. Building on work by @tessler2019 showing that generics can be thought of as inherently relative (i.e. more birds lay eggs than you would expect), we explore the consequences of different implied comparison categories on the interpretaiton of novel generics. In Experiment 1, we manipulated the set of categories salient to a listener by directly providing them the comparison sets. In Experiment 2, we collected participants’ demographic information and used these naturally occurring differences as a basis for differences in the participants' comparison sets. Results from both studies confirmed our hypothesis that the prevalence of a feature in different comparison categories changes people' estimatite of the feature prevalence in novel categories. ONE MORE SENTENCE HERE ABOUT IMPLICATIONS
     
 keywords: >
     generics; semantics; meaning; learning; Bayesian inference
@@ -29,55 +30,46 @@ knitr::opts_chunk$set(fig.width=3, fig.height=3, fig.crop = F,
 library(png)
 library(jpeg)
 library(grid)
-library(ggplot2)
 library(xtable)
+
 library(tidyverse)
 library(lubridate)
 library(lme4)
-library(DT)
-library(ggpirate)
-library(gridExtra)
+library(lmerTest)
 library(knitr)
-library(tidyboot)
-library(Matrix)
-library(effsize)
-library(pwr)
-library(compute.es)
-library(janitor)
 library(tidyboot)
 library(ggrepel)
 library(ggridges)
-library(hrbrthemes)
+library(here)
+library(broom)
+library(broom.mixed)
 library(viridis)
+library(papaja)
+library(ggthemes)
 theme_set(theme_classic())
 ```
 
 # Introduction
 
-Generic languages, such as “birds lay eggs,” are commonly used in parent-child conversations (Gelman & Tardif, 1998.) Different from sentences such as “that bird lays eggs” and “some birds lay eggs,” previous research has shown that generics were more likely to elicit people’s responses about kinds rather than specific instances of a kind (cite Gelman; Rhodes; Cimpian; Tessler). Conveying general information about a given category and its property, generics are part of our vernacular since a young age. Parents from English-speaking and Mandarin-speaking families regularly produce generics when talking with their children (Gelman & Tardif, 1998). Adults also utilize generics in their daily speech and writing (Master, 1987). However, despite its appearance in both speech and text, which may suggest it providing a privileged path to information transmission (easily understandable, highly accurate, etc.), the meaning of generic language is ambiguous. 
+Generic language like "birds lay eggs" is a simple, highly frequent way of transmitting information in everyday speech [@gelman1998;@gelman2008]. Generics are distinct from statements about particular referents "e.g. that bird lays eggs"; they transmit information about *categories*. Indeed, a large body of research has documented the power of generic language in adults' and children's inference about familiar and novel categories [e.g.,@cimpian2010;@cimpian2011;@rhodes2012]. Despite their ubiquity, generic statements defy a straightforward definition in threshold semantics (i.e. they do not specify a fixed prevalence rate). While people generally agree that "birds lay eggs," this does not mean that "all birds lay eggs ($100\%$)" nor does it mean that "most birds lay eggs ($>50\%$)"--male birds, and young female birds do not. Similarly, "birds lay eggs" cannot mean "some birds lay eggs ($>0\%$)," because it is true while "birds are female" is not.
 
-The composition of a generic, in comparison to other forms of statements, contributes to its vagueness in meaning. For instance, consider the bare plural noun phrase “birds” in “birds lay eggs”, it makes a claim about the bird category that underspecifies the prevalence rate of the feature \textit{lay eggs} in birds. “Birds lay eggs” is neither a statement about all members of that category laying eggs, nor half of the members, nor any specific proportion. If one were to evaluate the meaning (or truth value) of a generic and think carefully the criterion for which “birds lay eggs” would be true, one would realize that, for birds to lay eggs, they have to be adult, female, and healthy. These criterion immediately restrict the proportion of birds that lay eggs to be about 50% if not less. Thus, a reasonable interpretation of this generic relies heavily on a listener’s prior knowledge of the category “birds” and of the activity “lay eggs”. Upon hearing “lay eggs”, a listener may infer that female birds are the subject under discussion even though “female” is not explicitly mentioned so as to not mistakenly infer that all members of the category birds lay eggs. In contrast, quantifiers such as “some”, “most”, and “all” limits the interpretation of a sentence to a certain range of responses by providing a filtering criteria for prevalence distribution in members of a category. In the absence of quantifiers, the meaning of generics become more context-dependent and sensitive to listeners’ prior knowledge. People can generate quite different readings of the same generic, depending on their understanding of the underlying distribution of the category and property in a given generic.
+Recent work from @tessler2019 shows that generics can be understood through the lens of Gricean pragmatic inference [@grice1975]. Their key insight is that generics can be interpreted as statements about relative prevalence. If a speaker makes a vague statement like "birds lay eggs," but listeners assume that they are cooperatively intending to be informative, they can infer that the speaker means something like "birds are *more likely than you would have expected* to lay eggs." This formulation leaves open two questions: (1) how much more likely does a speaker mean, and (2) what did the listener expect? Tessler and Goodman answer the first question by showing that listeners do not need to resolve this ambiguity directly, but can instead integrate over all prevalence rates that would make the speaker's statement true. In a series of experiments with both familiar and novel generics, @tessler2019 show that people's judgements about prevalence rates following a generic statement are described by a rational model  pragmatic inference [@frank2012]. 
 
-\noindent \textbf{unfinished} Recent work has proposed to formalize the meaning of generic expressions as conditional probability (Tenenbaum, Kemp, Griffiths & Goodman, 2011; Frank & Goodman, 2012; Tessler & Goodman, 2017). Instead of specifying a fixed prevalence threshold for each category-feature pair, an interpretation for a generic can be seen as derived from listeners utilizing their probabilistic world knowledge upon hearing the statement. 
+We take up the second question: How do listeners arrive at their prior expectations? One possibility is that implicit in a generic statement is a set of reference categories, i.e. "birds lay eggs" means "relative to relevant comparison categories, birds are more likely to lay eggs." The listener's interpretation of a generic, then, should depend on the set of categories they consider relevant. That is, "feps are friendly (relative to puppies)" should lead to a much different estimate of the prevalence of friendliness in feps than "feps are friendly (relative to squirrels)." 
+
+We test this prediction in a two experiments in which people learn about novel categories through generic language. In the first, we manipulate the implied comparison category directly and show that people's judgments about the prevalence of a feature in a novel category tracks the prevalence level of the implied category. In a second experiment, we show the influence of implicit comparison categories without manipulating them. Here we leverage prior work showing that people's estimates about the prevalence of preferences and beliefs in others are egocentrically biased towards the prevalence of those preferences and beliefs in their local communities [@ross1977]. Together, these studies highlight the fundamentally relative way in which even simple generic statements are interpreted, and point towards a potential source of misunderstanding and errors in learning that can arise from well-intentioned communication. 
 
 # Experiment 1
-## Method
+
 Two conditions were tested in this experiment - (1a) a baseline survey, where we asked participants to estimate prevalence rate for familiar category-feature pairs, and (1b) a novel category survey, where participants were introduced to a novel category along with a familiar comparison category, then they were shown a generic containing a novel category and a familiar feature and asked to estimate the prevalence rate of the feature within the novel category. 
 
-\noindent \textbf{Participants} For condition 1a. baseline survey, we recruited 150 participants from Amazon Mechanical Turk. 145 participants passed the attention check question and their responses were included in the following analysis. For condition 1b. novel category survey, 150 participants were recruited from Amazon Mechanical Turk. 114 participants passed the attention check question and their responses were included in the analysis. Participants recruited were U.S. citizens over 18 years old and received monetary compensation for their work. We inserted a Unique Turker Id scirpt in our survey designs to ensure that each worker on Turk is allowed to take only one survey. 
 
-\noindent \textbf{Condition 1a. Baseline Survey} In condition 1a., three features (friendly, tasty, and heavy) were chosen, and, for each feature, we chose three categories that were relevant to the feature that will elicit different levels(low, medium, high) of prevalence estimation. These categories were later provided to the participants in condition (1b) as comparison sets for their inferences of the novel category. Every participant answered questions about each of three features and, for each feature, one randonly-selected category. The order in which the features appeared in the survey was randomized, and each participant was tested on only one category from each of the predetermined prevalence levels. In the survey, participants were first shown a generic for each of the category and feature pair. Then they were asked to first evaluate the truth condition of the generic by answering a forced-choice True or False question, and to estimate the proportion of the feature within the given category. Participants recorded their responses to the estimation question on a scale slider, ranging from 0% to 100%.
-
-\noindent \textbf{Condition 1b. Novel Category Survey} In condition 1b., the same three features (friendly, tasty, and heavy) were used. Different from condition (1a), for each feature, we introduced participants to a novel category using made-up words. Parctipants were also provided with categories from condition 1a. as a reference set in the form of "Feps(the made-up word) are like puppies(a baseline category)". The paired baseline category was randomly selected from the three possible categories for each feature. Same as 1a., every participant answered questions about all three features, and one randomly selected comparison category for each feature. The order in which the features came in the survey was again randomized, and each participant was tested on only one category from each predetermined response range (1 low, 1 medium, and 1 high). In the survey, participants were first told that they are visiting three new countries, and people from there will introduce them to things in their respective countries. Each novel category was embedded in a generic (e.g., "Feps are friendly") when first introduced, followed by an explicit of comparison set (e.g., "Feps are like puppies"). After which, participants were asked to estimate the proportion of the feature within the novel category. Participants recorded their responses to the estimation question on a scale slider, ranging from 0% to 100%.
-
-\noindent \textbf{Attention check question} For both conditions, we designed an attention check question in the end of the survey. For 1a., we asked participants to choose the three features we asked about in the survey. For 1b., we asked participants to select the three novel categories that were mentioned in the survey.
-
-```{r Exp1, fig.env="figure", fig.pos = "H", fig.align = "center", fig.width=3, fig.height=2.5, fig.cap = "Baseline vs. Novel Condition Prevalence Estimation"}
+```{r e1_data}
 #### read in data
 ### baseline ###
-data_baseline <- read_csv("../baseline-survey110218/data/020818baseline-anonymized-data.csv")
+data_baseline <- read_csv(here("baseline-survey110218/data/020818baseline-anonymized-data.csv"))
 ### explicit generic ###
-data_generic <- read_csv("../generic-survey110218/data/020818generic-anonymized-data.csv")
+data_generic <- read_csv(here("generic-survey110218/data/020818generic-anonymized-data.csv"))
 
 #### filter participants who passed attention check 
 ### baseline ###
@@ -155,37 +147,60 @@ exp1_new_long_data <- response_data_generic %>%
 exp1_all_long_data <- bind_rows(exp1_new_long_data, exp1_old_long_data) %>%
   select(-truefalse_response, -time_spent)
 
-exp1_all_long_data %>%
-  group_by(condition, type) %>%
-  tidyboot_mean(percent_response) %>% 
-  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), width=.2,
-                 position=position_dodge(.9), alpha= 0.6) +
-  scale_fill_brewer(palette="Paired") + 
-  xlab("Prevalence Level") +
-  ylab("Mean Response (%)") +
-  #labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
-  theme(axis.title.x =element_text(size=8, hjust = 0.5),
-        axis.title.y =element_text(size=8, hjust = 0.5),
-        legend.text = element_text(size=6),
-        legend.title = element_text(size = 8))
-
 exp1_empirical_stats <- exp1_all_long_data %>%
   group_by(condition, type) %>%
-  tidyboot_mean(percent_response)
+  tidyboot_mean(percent_response) 
 ```
 
-## Results
-Participant responses in both conditions increased by prevalence level (Fig. 1). In the baseline condition, participants' responses by prevalence levels were consistent with our prior grouping of the categories across features. For the low, medium, high prevalence level, the respective mean response are: \textit{M} = 47.7 (\textit{CI} = 43.1-52.4), \textit{M} = 60.0 (\textit{CI} = 55.9-64.1), and \textit{M} = 88.7 (\textit{CI} = 86.1-91). In the novel category condition, the respective mean response are: \textit{M} = 73.8 (\textit{CI} = 69.8-77.5), \textit{M} = 77.1 (\textit{CI} = 73.4-80.6), and \textit{M} = 86.1 (\textit{CI} = 83.4-88.7). Both the baseline and novel conditions exhibited a trend of increase in prevalence estimation by prevalence levels. Furthermore, consistent with our model's prediction, the mean responses of novel conditions in both low and medium prevalence levels were higher than the baseline condition. However, the novel condition's mean response for the high prevalence level is lower than the baseline condition's by 2.6, and their confidence intervals overlapped. 
+## Method
 
+### Participants 
+A total of `r nrow(data_baseline) + nrow(data_generic)` participants were recruited on Amazon Mechnical Turk, `r nrow(data_baseline)` participated in Experiment 1a, and `r nrow(data_baseline)` participated in Experiment 1b. Each participant gave informed consent at the start of the Experiment and was paid **AMOUNT** in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment (`r nrow(data_baseline) - nrow(qualtrics_filtered_baseline)` in Experiment 1a, and `r nrow(data_generic) - nrow(qualtrics_filtered_generic)` in Experiment 1b) yielding a final sample of `r nrow(qualtrics_filtered_baseline)` participants in 1a and `r nrow(qualtrics_filtered_generic)` participants in 1b.
+
+### Design and Procedure
+
+Three features (friendly, tasty, and heavy) were chosen, and, for each feature, we chose three categories that were relevant to the feature that will elicit different levels(low, medium, high) of prevalence estimation. Every participant answered questions about each of three features and, for each feature, one randonly-selected category. The order in which the features appeared in the survey was randomized, and each participant was tested on only one category from each of the predetermined prevalence levels.
+
+In Experiment 1a, participants were first shown a generic for each of the category and feature pair. Then they were asked to first evaluate the truth condition of the generic by answering a forced-choice True or False question, and to estimate the proportion of the feature within the given category. Participants recorded their responses to the estimation question on a scale slider, ranging from 0% to 100%.
+
+In Experiment 1b, participants answered similar questions but about novel categories. Participants were first told that they are visiting three new countries, and people from there will introduce them to things in their respective countries. Each novel category was first introduced by reference to one of the baseline categories from Experiment 1a (e.g. "Feps are like puppies"). Then, they were given a novel generic using the same features about this novel category (e.g., "Feps are friendly"). All other aspects of the design were identical.
+
+After completing these questions, participants were given an attention check to ensure that they had read and engaged with the stimuli. In Experiment 1a., we asked participants to choose the three features we asked about in the survey. In 1b., we asked participants to select the three novel categories that were mentioned in the survey.
+
+## Results and Analysis
+
+```{r exp1_fig, fig.env="figure", fig.pos = "tb", fig.align = "center", fig.width=3, fig.height=2.5, fig.cap = "Prevalence judgments of participants in the Baseline (1a) and Novel (1b) conditions. Error bars indicate 95\\% confidence intervals computed by nonparametric bootstrapping", cache = T}
+exp1_empirical_stats %>% 
+  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), position = position_dodge(.9))+
+  scale_fill_ptol() +
+  xlab("Predicted prevalence Level") +
+  ylab("Prevalence judgment (%)") +
+  theme(legend.position = c(.2,.9), legend.title = element_blank())
+  #labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
+  # theme(axis.title.x =element_text(size=8, hjust = 0.5),
+  #       axis.title.y =element_text(size=8, hjust = 0.5),
+  #       legend.text = element_text(size=6),
+  #       legend.title = element_text(size = 8))
+```
 
 ```{r}
 exp1_lmer <- exp1_all_long_data %>%
   mutate(id = paste0(condition, "_", id)) %>%
   lmer(percent_response/100 ~ type * condition + (1|id) + (1|feature), data = .) %>%
-  summary()
+  tidy() %>%
+  filter(effect == "fixed") %>%
+  select(-effect, -group)
 ```
+
+Figure \ref{fig:exp1_fig} shows participants' mean prevalence judgments across conditions in both conditions. In both Experiments, participants' judgments about the prevalence of the target feature in each category increased as predicted from low to medium to high. In addition, judgments made about the novel category were on average higher than the judgements for the corresponding category made by participants in the baseline condition, although this difference was not apparent in the high prevalence condition. We confirmed these predictions statistically using a mixed-effects logistic regression, predicting participants' judgments from condition and prevalence level and their interaction, with random effects of subject and feature (\texttt{prop $\sim$ condition * level + (1|subj) + (level|feature)}). This model revealed a significant effect of level, with both medium ($\beta =$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(p.value) %>% printp()`) and high ($\beta =$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(p.value) %>% printp()`) levels of apriori prevalence receiving higher prevalence judgments, a significant effect of condition ($\beta =$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(p.value) %>% printp()`), and a significant interaction between the two for both medium (($\beta =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(statistic) %>% round(2)`, $p =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(p.value) %>% printp()`) and high levels ($\beta =$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(p.value) %>% printp()`) indicating that the change in prevalence levels was largest for the lowest apriori level.
+
+## Discussion
+
+**NOT THE REAL TEXT WE WANT**
+We found the effect. Maybe some ceiling effects on prevalence? This is great because it shows we can manipulate the effects, but it's pretty explicit. Next we show we can do it with apriori estimates. First we get baseline estimates for demographic groups, then we show that these predict judgments about novel generics.
+
 
 # Experiment 2
 ## Method
@@ -197,7 +212,7 @@ Experiment 2 is composed of two experiments, where experiment 2a includes a base
 
 ```{r Exp2-map, fig.pos = "H", fig.align='center', fig.width=3, fig.heighti=3, set.cap.width=T, fig.cap = "Novel category survey map prompt"}
 
-img_map <- jpeg::readJPEG("figs/novel_country_map3.jpeg")
+img_map <- readJPEG(here("cogsci_paper/figs/novel_country_map3.jpeg"))
 grid::grid.raster(img_map)
 
 ```
@@ -211,8 +226,8 @@ We calculated the pearson correlation of average mean responsess across demograp
 
 ```{r Exp2-mean, fig.env = "figure*", fig.pos = "h", fig.width=6, fig.height=6, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Novel vs. baseline category mean response"}
 
-data_new <- read_csv("../demographic_generic/novel_generic/data/01102019_people_novel_habit_anonymized_data.csv") 
-data_old <- read_csv("../demographic_generic/baseline-people-habits/data/10312018_people_habit_anonymized_data.csv")
+data_new <- read_csv(here("/demographic_generic/novel_generic/data/01102019_people_novel_habit_anonymized_data.csv"))
+data_old <- read_csv(here("/demographic_generic/baseline-people-habits/data/10312018_people_habit_anonymized_data.csv"))
 
 # filter by condition: passing attention check
 old_attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
