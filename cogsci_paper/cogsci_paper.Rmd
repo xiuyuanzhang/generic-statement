@@ -46,7 +46,9 @@ library(broom.mixed)
 library(viridis)
 library(papaja)
 library(ggthemes)
-theme_set(theme_classic())
+theme_set(theme_classic(base_size = 10))
+
+options(digits=2)
 ```
 
 # Introduction
@@ -192,22 +194,6 @@ exp1_baseline_all_lmer <- exp1_old_long_data %>%
 ```
 
 
-```{r exp1_fig, fig.env="figure", fig.pos = "tb", fig.align = "center", fig.width=3, fig.height=2.5, fig.cap = "Prevalence judgments of participants in the Baseline (1a) and Novel (1b) conditions. Error bars indicate 95\\% confidence intervals computed by nonparametric bootstrapping", cache = T}
-exp1_empirical_stats %>% 
-  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), position = position_dodge(.9))+
-  scale_fill_ptol() +
-  xlab("Predicted prevalence Level") +
-  ylab("Prevalence judgment (%)") +
-  theme(legend.position = c(.2,.9), legend.title = element_blank())
-  #labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
-  # theme(axis.title.x =element_text(size=8, hjust = 0.5),
-  #       axis.title.y =element_text(size=8, hjust = 0.5),
-  #       legend.text = element_text(size=6),
-  #       legend.title = element_text(size = 8))
-```
-
 ```{r}
 exp1_lmer <- exp1_all_long_data %>%
   mutate(id = paste0(condition, "_", id)) %>%
@@ -223,7 +209,7 @@ Furthermore, the number of participants who evaluated the generic as true also v
 
 
 ## Discission
-The results from Experiment 1 confirmed our hypothesis that participants' estimations of feature prevalence for a category in a given generic varied by the predetermined prevalence level of comparison categories. However, if we consider only participants who evaluated true for the generics that that they were estimating, the difference between their estimations for categories from prevalence level low and from medium level is nonsigficant. One possibility is that participants who agreed with the generic are more likely to give a relatively higher prevalence ratings, which may results in similar mean prevalence estimations for the low and medium levels. The category-feature pairs were successful at eliciting participants' responses across diffferent prevalence levels, regardless of their evaluation of the truth condition of the generic. Next, in experiment 2, we introduced participants to novel categories along with the same set of familiar comparison categories. We predict that participants' estimation will be sensitive to the respective familiar comparison category across all three prevalence levels.
+The results from Experiment 1 confirmed our hypothesis that participants' estimations of feature prevalence for a category in a given generic varied by the predetermined prevalence level of comparison categories. However, if we consider only participants who evaluated true for the generics that that they were estimating, the difference between their estimations for categories from prevalence level low and from medium level is nonsigficant. One possibility is that participants who agreed with the generic are more likely to give a relatively higher prevalence ratings, which may results in similar mean prevalence estimations for the low and medium levels. The category-feature pairs were successful at eliciting participants' responses across diffferent prevalence levels, regardless of their evaluation of the truth condition of the generic. Next, in Experiment 2, we introduced participants to novel categories along with the same set of familiar comparison categories. We predict that participants' estimation will be sensitive to the respective familiar comparison category across all three prevalence levels.
 
 
 # Experiment 2
@@ -232,14 +218,34 @@ Experiment 2 included a novel category survey, where participants were introduce
 
 ## Method
 
-### Participants `r nrow(data_baseline)` participants were recruited through Amazon Mechanical Turk. Each participant gave informed consent at the start of the Experiment and was paid $0.1$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment (`r nrow(data_generic) - nrow(qualtrics_filtered_generic)`), yielding a final sample of `r nrow(qualtrics_filtered_generic)` participants.
+### Participants.
 
-### Design and Procedure
+`r nrow(data_baseline)` participants were recruited through Amazon Mechanical Turk. Each participant gave informed consent at the start of the Experiment and was paid $0.1$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment (`r nrow(data_generic) - nrow(qualtrics_filtered_generic)`), yielding a final sample of `r nrow(qualtrics_filtered_generic)` participants.
+
+### Design and Procedure.
+
 The same sets of features and categories from Experiment 1 were included in Experiment 2. Additional, three novel categories were introduced (one novel category per feature). Participants answered similar questions as the baseline survey in Experiment 1 but about novel categories. Participants were first told that they are visiting three new countries, and people from there will introduce them to things in their respective countries. Each novel category was first introduced by reference to one of the baseline categories from Experiment 1 (e.g. "Feps are like puppies"). Then, they were given a novel generic using the same features about this novel category (e.g., "Feps are friendly"). All other aspects of the design were identical.
 
 After completing these questions, participants were given an attention check to ensure that they had read and engaged with the stimuli. We asked participants to select the three novel categories that were mentioned in the survey.
 
 ## Results and Analysis
+
+
+```{r exp1_fig, fig.env="figure", fig.align = "center", fig.width=3, fig.height=2.5, fig.cap = "Prevalence judgments of participants in the Baseline (1a) and Novel (1b) conditions. Error bars indicate 95\\% confidence intervals computed by nonparametric bootstrapping", cache = T}
+exp1_empirical_stats %>% 
+  ggplot(aes(x = type, y = empirical_stat, fill = condition)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_linerange(aes(ymin=ci_lower, ymax=ci_upper), position = position_dodge(.9))+
+  scale_fill_ptol() +
+  xlab("Predicted prevalence Level") +
+  ylab("Prevalence judgment (%)") +
+  theme(legend.position = c(.2,.9), legend.title = element_blank())
+  #labs(title = "Estimation Responses to Selected Questions Across Features", subtitle = "Respective comparison category assigned to participants in the novel condition") + 
+  # theme(axis.title.x =element_text(size=8, hjust = 0.5),
+  #       axis.title.y =element_text(size=8, hjust = 0.5),
+  #       legend.text = element_text(size=6),
+  #       legend.title = element_text(size = 8))
+```
 
 Figure \ref{fig:exp1_fig} shows participants' mean prevalence judgments across conditions in both conditions. In both Experiments, participants' judgments about the prevalence of the target feature in each category increased as predicted from low to medium to high. In addition, judgments made about the novel category were on average higher than the judgements for the corresponding category made by participants in the baseline condition, although this difference was not apparent in the high prevalence condition. We confirmed these predictions statistically using a mixed-effects logistic regression, predicting participants' judgments from condition and prevalence level and their interaction, with random effects of subject and feature (\texttt{prop $\sim$ condition * level + (1|subj) + (level|feature)}). This model revealed a significant effect of level, with both medium ($\beta =$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typemedium") %>% pull(p.value) %>% printp()`) and high ($\beta =$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typehigh") %>% pull(p.value) %>% printp()`) levels of apriori prevalence receiving higher prevalence judgments, a significant effect of condition ($\beta =$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "conditionnovel") %>% pull(p.value) %>% printp()`), and a significant interaction between the two for both medium (($\beta =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(statistic) %>% round(2)`, $p =$ `r exp1_lmer %>% filter(term == "typemedium:conditionnovel") %>% pull(p.value) %>% printp()`) and high levels ($\beta =$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(estimate) %>% round(2)`, $t =$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(statistic) %>% round(2)`, $p$ `r exp1_lmer %>% filter(term == "typehigh:conditionnovel") %>% pull(p.value) %>% printp()`) indicating that the change in prevalence levels was largest for the lowest apriori level.
 
@@ -359,7 +365,7 @@ question_labels <- c(big_cities_1 = "like big cities",
 ```
 
 ### Participants
-`r nrow(data_old)` participants were recruited on Amazon Mechanical Turk. Each participant gave informed consent at the start of the exerpiment and was paid $0.5$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment. `r nrow(data_old) - nrow(old_qualtrics_filtered)` were excluded for failing the attention check. We further excluded participants who self-identified as gender non-conforming (`r nrow(old_qualtrics_filtered) - nrow(old_tidy_data)`) or participants over 60-year-old (`r nrow(old_tidy_data) - nrow(old_filtered_data)`), yielding a final sample of `r nrow(old_filtered_data)` participants ($\mu_{age}=$`r round(mean(old_filtered_data$age), digits=0)`, $sd =$`r round(sd(old_filtered_data$age), digits=2)`). 
+`r nrow(data_old)` participants were recruited on Amazon Mechanical Turk. Each participant gave informed consent at the start of the exerpiment and was paid $0.5$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment. `r nrow(data_old) - nrow(old_qualtrics_filtered)` were excluded for failing the attention check. We further excluded participants who self-identified as gender non-conforming (`r nrow(old_qualtrics_filtered) - nrow(old_tidy_data)`) or participants over 60-year-old (`r nrow(old_tidy_data) - nrow(old_filtered_data)`), yielding a final sample of `r nrow(old_filtered_data)` participants ($M_{age} =$ `r round(mean(old_filtered_data$age), digits=0)`, $sd =$ `r round(sd(old_filtered_data$age), digits=2)`).
 
 ### Design and Procedure
 Fiftheen features were chosen to be included in the survey. Each feature was either a familiar habit or activity people might participate in their daily lives (e.g., like to cook at home, go to the gym, consume dairy products). Every participant answered questions about each of the fifteen features and reported their estimated prevalence ratings for each feature in the generic category *people*. The order in which the features appeared in the survey was randomized.
@@ -370,6 +376,31 @@ Participants were first asked to estimate the proportion of the feature within t
 
 ## Results and Analysis
 
+
+```{r Exp2-ridges, fig.env = "figure", fig.width = 3.5, fig.cap = "Novel Condition Prevalence Estimation by Demographic Groups"}
+new_long_data%>%
+  filter(question %in% c("go_to_gym_1", "own_homes_1")) %>%
+  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
+  mutate(demographics = fct_reorder(demographics, response)) %>%
+  ggplot(aes(y=demographics, x=response, fill=demographics)) +
+  #stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE) +
+  #scale_fill_viridis(name = "Tail probability", direction = -1)
+  geom_density_ridges(alpha=0.6, bandwidth=6, scale=1.5) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  xlab("Responses (%)") +
+  ylab("") +
+  facet_wrap(~question, labeller=labeller(question = question_labels)) +
+  #labs(title= "Participants' Response to Novel Generic Questions by Demographic Subgroup") +
+  theme(axis.title.x =element_text(size=8, hjust = 0.5),
+        axis.title.y =element_text(size=8, hjust = 0.5),
+        strip.text.x = element_text(size = 6),
+        plot.title = element_text(size = 8),
+        legend.position="none",
+        panel.spacing = unit(0.3, "lines"),
+        strip.text.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6))
+```
 
 
 ## Discussion
@@ -388,13 +419,15 @@ grid::grid.raster(img_map)
 
 ```
 
-### Participants
-`r nrow(data_new)` participants were recruited on Amazon Mechanical Turk. Each participant gave informed consent at the start of the exerpiment and was paid $0.2$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment. `r nrow(data_new) - nrow(new_qualtrics_filtered)` were excluded for failing the attention check. We further excluded participants who self-identified as gender non-conforming (`r nrow(new_qualtrics_filtered) - nrow(new_tidy_data)`) or participants over 60-year-old (`r nrow(new_tidy_data) - nrow(new_filtered_data)`), yielding a final sample of `r nrow(new_filtered_data)` participants ($\mu_{age}=$`r round(mean(new_filtered_data$age), digits=0)`, $sd =$`r round(sd(new_filtered_data$age), digits=2)`). 
+### Participants.
 
-### Design and Procedure 
+`r nrow(data_new)` participants were recruited on Amazon Mechanical Turk. Each participant gave informed consent at the start of the exerpiment and was paid $0.2$ dollar in compensation. Participants were excluded from the final sample if they did not pass an attention check at the end of experiment. `r nrow(data_new) - nrow(new_qualtrics_filtered)` were excluded for failing the attention check. We further excluded participants who self-identified as gender non-conforming (`r nrow(new_qualtrics_filtered) - nrow(new_tidy_data)`) or participants over 60-year-old (`r nrow(new_tidy_data) - nrow(new_filtered_data)`), yielding a final sample of `r nrow(new_filtered_data)` participants ($M{age} =$ `r round(mean(new_filtered_data$age), digits=0)`, $sd =$`r round(sd(new_filtered_data$age), digits=2)`).
+
+### Design and Procedure.
+
 Participants in this condition were first shown a map of 6 imaginary countries and their corresponding novel names (see Figure \ref{fig:exp4-map}) along with a prompt. They were told that people from these six countries will introduce some habits of people from their countries to them. They were then introduced to generic statements about each of the country and a habit selected from the simulation. After reading the generic statement, participants were then asked to make an estimate the percentage of people having a certain habit or activity. Participants responded by choosing a number from 0 - 100% using a slider bar. The order in which the questions appeared was randomized. The code for analyze this experiment is preregistered.
 
-```{r exp4-mean,fig.env = "figure*", fig.pos = "h", fig.width=6, fig.height=6, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Novel vs. baseline category mean response"}
+```{r exp4-mean,fig.env = "figure", fig.cap = "Novel vs. baseline category mean response"}
 unscaled_all_data_mean %>%
  # filter(quesition %in% c( "go_to_gym_1", "own homes")
   mutate(demographics = paste(gender, age_bin, politics_bin, sep = ", \n")) %>%
@@ -410,43 +443,21 @@ unscaled_all_data_mean %>%
   scale_colour_discrete(name="Question") +
   ylab("mean response from novel generics") + 
   xlab("mean response from baseline") +
-  labs(title= "Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
+  # labs(title= "Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
   theme(axis.title.x =element_text(size=8, hjust = 0.5),
         axis.title.y =element_text(size=8, hjust = 0.5),
         strip.text.x = element_text(size = 6),
         plot.title = element_text(size = 8),
         plot.subtitle = element_text(size = 6),
-        legend.position = c(.8, .3),
-        legend.title = element_text(size=8))
+        legend.position = c(.9, .35),
+        legend.key.height=unit(.75,"line"),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 5))
 ```
 
 ## Results
-We calculated the pearson correlation of average mean responsess across demographic groups between Experiments 3 and 4 for all 6 questions selected via simulation. The average mean responses between the two experiments are sigficantly correlated for each question (**CODE NOT WORKING** $\beta=$ `r t_test_cor_result$estimate`, $p=$ `r t_test_cor_result$p.value`, $t=$ `r t_test_cor_result$statistic`). The highest correlation among the six questions was `r all_data %>% filter(question == "cook_at_home_1") %>% pull(cor) %>% round(2)` for the feature "like to cook at home", and the lowest correlation was `r all_data %>% filter(question == "go_to_gym_1") %>% pull(cor) %>% round(2)` for "go to the gym". We further examinzed the within-demographic group differences in mean responses between the baseline and novel experiments by questions (see Fig \ref{fig:exp4-mean}). The demographic groups were divided into 8 subgroups (2 age bins $\times$ 2 gender bins $\times$ 2 political ideology bins). The bins for dividing age and political ideology scores in experiment (2a) were based on the mean age and mean political ideology scores in Experiment 3. Each dot in the sub-plot in Figure \ref{fig:exp4-mean} is a unique demographic group. Across all six questions, the mean responses from each of the 8 demographic groups for the novel conditions (shown in y-axis) were consistently higher than the mean responses for the baseline condition. The results from experiment 2 showed that participants from different demographic groups make different prevalence estimations within each question, and their responses were on average higher for novel conditions than for baseline conditions. Participants across demographic groups also respond to different questions differently. 
-```{r Exp2-ridges, fig.env = "figure*", fig.pos = "h", fig.width=6, fig.height=3, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Novel Condition Prevalence Estimation by Demographic Groups"}
 
-new_long_data%>%
-  filter(question %in% c("go_to_gym_1", "own_homes_1")) %>%
-  mutate(demographics = paste(gender, age_bin, politics_bin, sep = ",")) %>%
-  mutate(demographics = fct_reorder(demographics, response)) %>%
-  ggplot(aes(y=demographics, x=response, fill=demographics)) +
-  #stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE) +
-  #scale_fill_viridis(name = "Tail probability", direction = -1)
-  geom_density_ridges(alpha=0.6, bandwidth=6, scale=1.5) +
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE) +
-  xlab("Responses (%)") +
-  ylab("Density") +
-  facet_wrap(~question, labeller=labeller(question = question_labels)) +
-  labs(title= "Participants' Response to Novel Generic Questions by Demographic Subgroup") +
-  theme(axis.title.x =element_text(size=8, hjust = 0.5),
-        axis.title.y =element_text(size=8, hjust = 0.5),
-        strip.text.x = element_text(size = 6),
-        plot.title = element_text(size = 8),
-        legend.position="none",
-        panel.spacing = unit(0.3, "lines"),
-        strip.text.y = element_text(size = 6))
-```
-
+We calculated the pearson correlation of average mean responsess across demographic groups between Experiments 3 and 4 for all 6 questions selected via simulation. The average mean responses between the two experiments are signficantly correlated for each question (**CODE NOT WORKING** $\beta=$ `r t_test_cor_result$estimate`, $t =$ `r t_test_cor_result$statistic`, $p =$ `r t_test_cor_result$p.value %>% printp`). The highest correlation among the six questions was `r all_data %>% filter(question == "cook_at_home_1") %>% pull(cor) %>% round(2)` for the feature "like to cook at home", and the lowest correlation was `r all_data %>% filter(question == "go_to_gym_1") %>% pull(cor) %>% round(2)` for "go to the gym". We further examinzed the within-demographic group differences in mean responses between the baseline and novel experiments by questions (see Fig \ref{fig:exp4-mean}). The demographic groups were divided into 8 subgroups (2 age bins $\times$ 2 gender bins $\times$ 2 political ideology bins). The bins for dividing age and political ideology scores in experiment (2a) were based on the mean age and mean political ideology scores in Experiment 3. Each dot in the sub-plot in Figure \ref{fig:exp4-mean} is a unique demographic group. Across all six questions, the mean responses from each of the 8 demographic groups for the novel conditions (shown in y-axis) were consistently higher than the mean responses for the baseline condition. The results from Experiment 2 showed that participants from different demographic groups make different prevalence estimations within each question, and their responses were on average higher for novel conditions than for baseline conditions. Participants across demographic groups also respond to different questions differently. 
 
 # General Discussion
 
