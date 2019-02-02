@@ -443,8 +443,8 @@ all_data_mean %>%
          demographics = paste(gender, age_bin, politics_bin, sep = ", \n"),
          plot_demographics = if_else(demographics %in% c("male, \nyounger, \nliberal", "female, \nolder, \nconservative"), demographics, "")) %>%
   ggplot(aes(x = old, y = new, colour = question, label = plot_demographics, group = question)) +
-  geom_jitter(size = 1) +
-  geom_text_repel(size = 2, force = 10, point.padding = 0.1, box.padding = 0.3, show.legend = F, segment.alpha = 0.4) +
+  geom_jitter(size = 0.8) +
+  geom_text_repel(size = 1.5, force = 10, point.padding = 0.1, box.padding = 0.3, show.legend = F, segment.alpha = 0.4) +
   #coord_fixed(ratio=1, xlim = c(20, 100), ylim = c(20, 100)) +
   #scale_x_continuous(limits = c(30, 90)) + 
   #scale_y_continuous(limits = c(30, 90)) +
@@ -454,15 +454,13 @@ all_data_mean %>%
   ylab("mean response from novel generics") + 
   xlab("mean response from baseline") +
   # labs(title= "Mean Response of Prevalence Estimation for Questions", subtitle = "What proportion of people(novel category) do you think _______?") +
-  theme(axis.title.x =element_text(size=8, hjust = 0.5),
-        axis.title.y =element_text(size=8, hjust = 0.5),
-        strip.text.x = element_text(size = 6),
-        plot.title = element_text(size = 8),
-        plot.subtitle = element_text(size = 6),
-        legend.position = c(.9, .35),
+  theme(axis.title.x =element_text(size=6, hjust = 0.5),
+        axis.title.y =element_text(size=6, hjust = 0.5),
+        strip.text.x = element_text(size = 4),
+        legend.position = c(.18, .85),
         legend.key.height=unit(.75,"line"),
         legend.title = element_blank(),
-        legend.text = element_text(size = 5))
+        legend.text = element_text(size = 4))
 ```
 
 ## Results
