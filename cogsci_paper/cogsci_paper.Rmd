@@ -457,7 +457,7 @@ all_data_mean %>%
   theme(axis.title.x =element_text(size=6, hjust = 0.5),
         axis.title.y =element_text(size=6, hjust = 0.5),
         strip.text.x = element_text(size = 4),
-        legend.position = c(.18, .85),
+        legend.position = c(.2, .85),
         legend.key.height=unit(.75,"line"),
         legend.title = element_blank(),
         legend.text = element_text(size = 4))
