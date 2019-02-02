@@ -1,5 +1,5 @@
 ---
-title: "Interpretation of Generic Language is Depends on Listener's Background Knowledge"
+title: "Interpretation of Generic Language is Dependent on Listener's Background Knowledge"
 bibliography: generic-statement.bib
 csl: apa6.csl
 document-params: "10pt, letterpaper"
