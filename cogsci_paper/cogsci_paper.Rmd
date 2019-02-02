@@ -412,7 +412,7 @@ old_long_data%>%
         legend.position="none",
         panel.spacing = unit(0.3, "lines"),
         strip.text.y = element_text(size = 4),
-        axis.text.y = element_text(size = 6, vjust = -0.25))
+        axis.text.y = element_text(size = 4, vjust = -0.25))
 ```
 
 # Experiment 4
