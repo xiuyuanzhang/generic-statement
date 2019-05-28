@@ -1,0 +1,85 @@
+---
+title             : "Interpretation of Generic Language is Dependent on Listener's Background Knowledge"
+shorttitle        : "Title"
+
+author: 
+  - name          : "Xiuyuan Zhang"
+    affiliation   : "1"
+    corresponding : yes    # Define only one corresponding author
+    address       : "Postal address"
+    email         : "xiuyuanzhang@uchicago.edu"
+  - name          : "Daniel Yurovsky"
+    affiliation   : "1"
+
+affiliation:
+  - id            : "1"
+    institution   : "University of Chicago"
+
+authornote: |
+  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
+
+  Enter author note here.
+
+abstract: |
+  Generic language, like "birds lay eggs" or "dogs bark" are simple and ubiquitous in naturally produced speech. However, the inherent vagueness of generics makes their interpretation highly context-dependent. Building on work by @tessler2019 showing that generics can be thought of as inherently relative (i.e. more birds lay eggs than you would expect), we explore the consequences of different implied comparison categories on the interpretation of novel generics. In Experiments 1 and 2, we manipulated the set of categories salient to a listener by directly providing them the comparison sets. In Experiments 3 and 4, we collected participants’ demographic information and used these naturally occurring differences as a basis for differences in the participants' comparison sets. Results from all four studies confirmed our hypothesis that the prevalence of a feature in different comparison categories changes people' estimations of the feature's prevalence in novel categories. These results, highlighting how context-sensitive interpretations of generic language are to listeners' prior knowledge, suggest a possible source for *well-intentioned* miscommunications, where conversational partners are cooperative during a discourse but are led by their different backgrounds to make dissimilar inferences of the same statement. 
+  
+keywords          : " generics; semantics; meaning; learning; Bayesian inference"
+wordcount         : "X"
+
+bibliography      : ["generics.bib"]
+
+floatsintext      : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+mask              : no
+draft             : yes
+
+documentclass     : "apa6"
+classoption       : "man"
+output            : papaja::apa6_pdf
+---
+
+```{r setup, include = FALSE}
+library("papaja")
+```
+
+```{r analysis-preferences}
+# Seed for random number generation
+set.seed(42)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+
+
+# Methods
+We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
+
+## Participants
+
+## Material
+
+## Procedure
+
+## Data analysis
+
+
+# Results
+
+# Discussion
+
+
+\newpage
+
+# References
+```{r create_r-references}
+r_refs(file = "r-references.bib")
+```
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id = "refs"></div>
+\endgroup

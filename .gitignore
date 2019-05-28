@@ -36,3 +36,4 @@ vignettes/*.pdf
 *.log
 
 cogsci_paper/cogsci_paper.tex
+journal_paper/generics_journal.tex
