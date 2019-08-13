@@ -190,6 +190,14 @@ exp1_baseline_all_lmer <- exp1_old_long_data %>%
   filter(effect == "fixed") %>%
   select(-effect, -group)
 
+# add model for only responses that endorsed the generic
+exp1_baseline_endorsed_lmer <- response_filtered_yes_baseline %>%
+  lmer(percent_response/100 ~ type + (1|id) + (1|feature), data = .) %>%
+  tidy() %>%
+  filter(effect == "fixed") %>%
+  select(-effect, -group)
+  
+
 ```
 
 
