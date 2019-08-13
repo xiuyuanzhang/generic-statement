@@ -51,6 +51,269 @@ set.seed(42)
 knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
 ```
 
+```{r, libraries}
+library(tinytex)
+library(png)
+library(jpeg)
+library(grid)
+library(xtable)
+library(tidyverse)
+library(lubridate)
+library(lme4)
+library(lmerTest)
+library(knitr)
+library(tidyboot)
+library(ggrepel)
+library(ggridges)
+library(here)
+library(broom)
+library(broom.mixed)
+library(viridis)
+library(papaja)
+library(ggthemes)
+
+theme_set(theme_classic(base_size = 10))
+
+options(digits=2)
+```
+
+# experiment 1 - experimentally manipulated priors (incl. baseline and novel)
+
+```{r e1_data}
+#### read in data
+### baseline ###
+data_baseline <- read_csv(here("baseline-survey110218/data/020818baseline-anonymized-data.csv"))
+### explicit generic ###
+data_generic <- read_csv(here("generic-survey110218/data/020818generic-anonymized-data.csv"))
+
+#### filter participants who passed attention check 
+### baseline ###
+qualtrics_filtered_baseline <- data_baseline %>%
+  filter(Q8 == "friendly,tasty,heavy")
+### explicit generic ###
+qualtrics_filtered_generic <- data_generic %>%
+  filter(Q10 == "kobas,feps,dands")
+
+#### Munge data
+### In both surveys, the categories and features we chose are consistent.
+# use to group different levels
+high_objects <- c("puppies","trucks","pizzas")
+med_objects <- c("goats", "rocks", "fruits")
+low_objects <- c("squirrels", "bikes", "vegetables")
+features <- c("friendly", "heavy", "tasty")
+
+# features and objects for the survey
+objects <- data_frame(type = "high", object = high_objects,
+                      feature = features) %>%
+  bind_rows(data_frame(type = "medium", object = med_objects,
+                       feature = features)) %>%
+  bind_rows(data_frame(type = "low", object = low_objects,
+                       feature = features))
+
+# get data for each of the three conditions
+### baseline ###
+q1_baseline <- qualtrics_filtered_baseline %>%
+  select(id, L_feature, L_object, Q1, Q2_1) %>%
+  rename(feature = L_feature, baseline_object = L_object, truefalse_response = Q1, percent_response = Q2_1)
+
+q2_baseline <- qualtrics_filtered_baseline %>%
+  select(id, M_feature, M_object, Q3, Q4_1) %>%
+  rename(feature = M_feature, baseline_object = M_object, truefalse_response = Q3, percent_response = Q4_1)
+
+q3_baseline <- qualtrics_filtered_baseline %>%
+  select(id, H_feature, H_object, Q5, Q6_1) %>%
+  rename(feature = H_feature, baseline_object = H_object, truefalse_response = Q5, percent_response = Q6_1)
+
+### explicit generic ###
+colnames(qualtrics_filtered_generic)[colnames(qualtrics_filtered_generic) == "Duration (in seconds)"] <- "time_spent"
+
+# get data for each of the three conditions
+q1_generic <- qualtrics_filtered_generic %>%
+  select(id, L_feature, L_comparison, L_novel, Q2_1, time_spent) %>%
+  rename(feature = L_feature, baseline_object = L_comparison, novel_object = L_novel, percent_response = Q2_1)
+
+q2_generic <- qualtrics_filtered_generic %>%
+  select(id, M_feature, M_comparison, M_novel, Q5_1, time_spent) %>%
+  rename(feature = M_feature, baseline_object = M_comparison, novel_object = M_novel,percent_response = Q5_1)
+
+q3_generic <- qualtrics_filtered_generic %>%
+  select(id, H_feature, H_comparison, H_novel, Q6_1, time_spent) %>%
+  rename(feature = H_feature, baseline_object = H_comparison, novel_object = H_novel, percent_response = Q6_1)
+
+# combine
+### baseline ###
+response_data_baseline <- bind_rows(q1_baseline, q2_baseline, q3_baseline) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+### explicit generic ###
+response_data_generic <- bind_rows(q1_generic, q2_generic, q3_generic) %>%
+  mutate(type = if_else(baseline_object %in% high_objects, "high",
+                        if_else(baseline_object %in% med_objects, "medium","low"))) %>%
+  mutate(type = factor(type, levels = c("low", "medium", "high")))
+
+#### Plot for CogSci
+exp1_old_long_data <- response_data_baseline %>%
+  mutate(condition = "baseline")
+
+exp1_new_long_data <- response_data_generic %>%
+  mutate(condition = "novel")
+  
+exp1_all_long_data <- bind_rows(exp1_new_long_data, exp1_old_long_data) %>%
+  select(-truefalse_response, -time_spent)
+
+exp1_empirical_stats <- exp1_all_long_data %>%
+  group_by(condition, type) %>%
+  tidyboot_mean(percent_response) 
+```
+
+```{r}
+response_filtered_yes_baseline <- response_data_baseline %>%
+  filter(truefalse_response == "Yes") %>%
+  mutate(true = "baseline_yes")
+
+empirical_stats_filtered_yes_baseline <- response_filtered_yes_baseline %>%
+  group_by(type) %>%
+  tidyboot_mean(percent_response)
+
+exp1_baseline_lmer <- exp1_old_long_data %>%
+  mutate(id = paste0(condition, "_", id)) %>%
+  lmer(percent_response/100 ~ type * truefalse_response + (1|id) + (1|feature), data = .) %>%
+  tidy() %>%
+  filter(effect == "fixed") %>%
+  select(-effect, -group)
+
+exp1_baseline_all_lmer <- exp1_old_long_data %>%
+  mutate(id = paste0(condition, "_", id)) %>%
+  lmer(percent_response/100 ~ type + (1|id) + (1|feature), data = .) %>%
+  tidy() %>%
+  filter(effect == "fixed") %>%
+  select(-effect, -group)
+
+```
+
+
+```{r}
+exp1_lmer <- exp1_all_long_data %>%
+  mutate(id = paste0(condition, "_", id)) %>%
+  lmer(percent_response/100 ~ type * condition + (1|id) + (1|feature), data = .) %>%
+  tidy() %>%
+  filter(effect == "fixed") %>%
+  select(-effect, -group)
+```
+
+# experiment 2 - naturally occurring priors & simulations (incl. baseline)
+```{r Exp2and3-data}
+
+data_new <- read_csv(here("/demographic_generic/novel_generic/data/01102019_people_novel_habit_anonymized_data.csv"))
+data_old <- read_csv(here("/demographic_generic/baseline-people-habits/data/10312018_people_habit_anonymized_data.csv"))
+
+# filter by condition: passing attention check
+old_attnCheckAnswers <- c('drink coffee','cook at home', 'go to the gym', 'drive to work')
+
+old_qualtrics_filtered <- data_old %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% old_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% old_attnCheckAnswers))%>%
+  filter(attnFalse==0)
+
+old_tidy_data <- old_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male")))
+
+old_filtered_data <- old_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+
+new_attnCheckAnswers <- c('like big cities','cook at home', 'go to the gym', 'consume dairy products')
+
+new_qualtrics_filtered <- data_new %>%
+    rowwise() %>%
+  mutate(attention_check = (strsplit(attention_check, ','))) %>%
+  mutate(attnTrue = sum(attention_check %in% new_attnCheckAnswers),
+         attnFalse= sum(!attention_check %in% new_attnCheckAnswers))%>%
+  filter(attnTrue ==4 & attnFalse==0)
+
+new_tidy_data <- new_qualtrics_filtered %>%
+  filter(gender != "Other/Non-conforming") %>%
+  mutate(gender = factor(gender, levels = c("Female", "Male"), labels = c("female", "male"))) 
+
+new_filtered_data <- new_tidy_data %>%
+  filter(age < 60) %>%
+  mutate(age_bin = if_else(age > median(old_tidy_data$age), "older", "younger"),
+         politics_bin = if_else(politics_1 > median(old_tidy_data$politics_1), 
+                                "conservative", "liberal"))
+
+old_long_data <- old_filtered_data %>%
+  select(big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1, gender, age_bin, politics_bin, id) %>%
+  gather(question, response, big_cities_1, computer_preference_1, cook_at_home_1,own_homes_1, dairy_products_1, go_to_gym_1)
+
+new_long_data <- new_filtered_data %>%
+  select(big_cities_1:go_to_gym_1, 
+         gender, age_bin, politics_bin, id)%>%
+  gather(question, response, big_cities_1:go_to_gym_1)
+
+#### cor
+new_data <- new_long_data %>% 
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+old_data <- old_long_data %>%
+  group_by(id) %>%
+  mutate(response = scale(response)) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+all_data <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+t_test_cor_result <- t.test(all_data$cor)
+
+# UNSCALED
+unscaled_new_data <- new_long_data %>% 
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response, na.rm = T)) %>%
+  mutate(data = "new")
+
+unscaled_old_data <- old_long_data %>%
+  group_by(id) %>%
+  group_by(gender, age_bin, politics_bin, question) %>%
+  summarise(mean = mean(response)) %>%
+  mutate(data = "old")
+
+unscaled_all_data <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean) %>%
+  summarise(cor = cor(new, old, use = "complete"))
+
+unscaled_all_data_mean <- bind_rows(unscaled_new_data, unscaled_old_data) %>%
+  group_by(question) %>%
+  spread(data, mean)
+
+all_data_mean <- bind_rows(new_data, old_data) %>%
+  group_by(question) %>%
+  spread(data, mean)
+
+question_labels <- c(big_cities_1 = "like big cities",
+                     computer_preference_1 = "prefers Macs over PCs",
+                     cook_at_home_1 = "like to cook at home",
+                     dairy_products_1 = "consume dairy products",
+                     go_to_gym_1 = "go to the gym",
+                     own_homes_1 = "own homes")
+```
+# experiment 3 - naturally occurring priors (incl. novel)
+
+
 
 
 # Methods
